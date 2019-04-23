@@ -8,6 +8,7 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 TRAIN_FILE = "sentences.train"
 EVAL_FILE = "sentences.eval"
 TEST_FILE = "sentences_test.txt"
+EMBEDDING_FILE = ""
 BASE_VOCAB  = ["<bos>", "<eos>", "<pad>", "<unk>"]
 
 SAVE_TRAIN = "train.pkl"
@@ -26,24 +27,23 @@ class Dataset(object):
     eval = None
     continuation = None
 
-    def __init__(self, input_dir, embed_path=None, save_dir=None, **kwargs):
+    def __init__(self, input_dir, embed_file, save_dir=None, **kwargs):
         """
         Parameters
         ----------
         input_dir: str
             Location of datasets
-        embed_path: str, default None
+        embed_file: str, default None
             Location of word2vec embeddings
         save_dir: str, default None
             Where to save parsed datasets
         """
-
         self.input_dir = input_dir
         if save_dir is None:
             self.save_dir = input_dir
         else:
             self.save_dir = save_dir
-        self.embed_path = embed_path
+        self.embedding_file = os.path.join(input_dir, embed_file)
 
     def generate_vocab(self, max_sen_len=30, topk=20000, save=False):
         """Generates the vocabulary used.
@@ -100,12 +100,11 @@ class Dataset(object):
         max_sen_length: int, default 30
             Maximum length of allowed sentences
         """
+        line = []
+        parsed = False
         words = sentence.split()
         words.insert(0, "<bos>")
         words.append("<eos>")
-
-        line = []
-        parsed = False
 
         if(len(words) <= max_sen_length - 2):
             words = self.pad(words, padded_len=max_sen_length)
@@ -119,16 +118,58 @@ class Dataset(object):
 
         return line, parsed
 
-    def parse_train(self, max_sen_length=30, verbose=False, save=False):
-        self.train = self.parse_sentences(mode="train", max_sen_length=max_sen_length, verbose=verbose, save=save)
+    def parse_train(self, max_sen_length=30, verbose=False, save=False, reload=True):
+        """Parses training sentences.
 
-    def parse_test(self, max_sen_length=30, verbose=False, save=False):
-        self.test = self.parse_sentences(mode="test", max_sen_length=max_sen_length, verbose=verbose, save=save)
+        Parameters
+        ----------
+        mode: str, default train
+            Which dataset to parse
+        max_sen_length: int, default 30
+            Maximum allowed sentence length
+        verbose: bool, default False
+            Whether to print progress during parsing
+        save: bool, default False
+            Whether to save result of parsing.
+        """
+        self.train = self.parse_sentences(mode="train", max_sen_length=max_sen_length,
+                                          verbose=verbose, save=save, reload=reload)
 
-    def parse_eval(self, max_sen_length=30, verbose=False, save=False):
-        self.eval = self.parse_sentences(mode="eval", max_sen_length=max_sen_length, verbose=verbose, save=save)
+    def parse_test(self, max_sen_length=30, verbose=False, save=False, reload=True):
+        """Parses test sentences.
 
-    def parse_sentences(self, mode="train", max_sen_length=30, verbose=False, save=False):
+        Parameters
+        ----------
+        mode: str, default train
+            Which dataset to parse
+        max_sen_length: int, default 30
+            Maximum allowed sentence length
+        verbose: bool, default False
+            Whether to print progress during parsing
+        save: bool, default False
+            Whether to save result of parsing.
+        """
+        self.test = self.parse_sentences(mode="test", max_sen_length=max_sen_length,
+                                         verbose=verbose, save=save, reload=reload)
+
+    def parse_eval(self, max_sen_length=30, verbose=False, save=False, reload=True):
+        """Parses eval sentences.
+
+        Parameters
+        ----------
+        mode: str, default train
+            Which dataset to parse
+        max_sen_length: int, default 30
+            Maximum allowed sentence length
+        verbose: bool, default False
+            Whether to print progress during parsing
+        save: bool, default False
+            Whether to save result of parsing.
+        """
+        self.eval = self.parse_sentences(mode="eval", max_sen_length=max_sen_length,
+                                         verbose=verbose, save=save, reload=reload)
+
+    def parse_sentences(self, mode="train", max_sen_length=30, verbose=False, save=False, reload=True):
         """Parses sentences depending on mode specified.
 
         Parameters
@@ -142,12 +183,15 @@ class Dataset(object):
         save: bool, default False
             Whether to save result of parsing.
         """
-
         load_filenames = {"train": TRAIN_FILE, "eval": EVAL_FILE, "test": TEST_FILE}
         save_filenames = {"train": SAVE_TRAIN, "eval": SAVE_EVAL, "test": SAVE_TEST}
 
         load_file = load_filenames[mode]
         save_file = save_filenames[mode]
+
+        if reload:
+            with open(os.path.join(self.save_dir, save_file), "rb") as f:
+                return pickle.load(f)
 
         with open(os.path.join(self.input_dir, load_file), "r") as f:
             f.seek(0)
@@ -163,6 +207,33 @@ class Dataset(object):
                 pickle.dump(np.asarray(output), f)
 
         return np.asarray(output)
+
+    def batch_generator(self, mode="train", batch_size=64, shuffle=True):
+        """Generates batches of data for training.
+
+        Parameters
+        ----------
+        mode: str, default train
+            Whether we want to generate batches for train, eval or test dataset
+        batch_size: int, default 64
+            Batch size used
+        shuffle: bool, default True
+            Whether to shuffle before generating batches
+        """
+        if mode == "train":
+            data = self.train
+        elif mode == "eval":
+            data = self.eval
+        elif mode == "test":
+            data = self.test
+
+        n_samples = data.shape[0]
+        if shuffle:
+            shuffled = np.random.permutation(n_samples)
+        else:
+            shuffled = np.arange(n_samples)
+        for idx in range(0, n_samples, batch_size):
+            yield data[shuffled[idx: idx + batch_size]]
 
 def run():
     """Runs the specified experiment."""
