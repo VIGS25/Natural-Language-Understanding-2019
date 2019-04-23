@@ -4,10 +4,12 @@ from tensorflow.contrib.rnn import BasicLSTMCell
 from tensorflow.contrib.layers import xavier_initializer as xav_init
 from load_embeddings import load_embedding
 from dataset import Dataset
+import time
 
 SEED = 42
 
 class LanguageModel(object):
+    built = False
 
     def __init__(self,
                  dataset,
@@ -44,7 +46,7 @@ class LanguageModel(object):
         self.dataset = dataset
         self.lstm_hidden_size = lstm_hidden_size
         self.embedding_size = embedding_size
-        self.project = True
+        self.project = False
         if project:
             self.project_size = project_size
         self.session = tf.Session(graph=graph)
@@ -55,6 +57,7 @@ class LanguageModel(object):
             self._placeholders()
             self._embeddings()
             self._savers(log_dir=log_dir)
+            self._summaries()
             self._compute_cross_entropy_loss()
             self._compute_perplexity()
             self._optimizer()
@@ -86,9 +89,13 @@ class LanguageModel(object):
 
     def _embeddings(self, pretrained=False, scope_name=None):
         """Compute word embeddings for sentence.
-        
 
-
+        Parameters
+        ----------
+        pretrained: bool, default False
+            Whether to use pretrained embeddings
+        scope_name: str, default None
+            Variable scope
         """
         if not scope_name:
             scope_name = "Embedding"
@@ -101,12 +108,15 @@ class LanguageModel(object):
             )
 
             if pretrained:
-                load_embedding(session=self.session, vocab=vocab,
-                               emb=self.embedding_matrix, path=self.embed_path,
+                load_embedding(session=self.session,
+                               vocab=self.dataset.vocab,
+                               emb=self.embedding_matrix,
+                               path=self.dataset.embedding_file,
                                vocab_size=self.len_corpus,
                                dim_embedding=self.embedding_size)
 
-            self.word_embeddings = tf.nn.embedding_lookup(self.embedding_matrix, self.sentence_ph)
+            self.word_embeddings = tf.nn.embedding_lookup(self.embedding_matrix,
+                                                          self.sentence_ph)
 
     def _build_rnn(self, trainable_zero_state=False, scope_name=None):
         """Sets up the LSTM and its unrolling."""
@@ -127,7 +137,7 @@ class LanguageModel(object):
 
     def _projection_layer(self, scope_name=None):
         """Creates the weight matrix for projection, when a larger LSTM is used."""
-        if scope_name is not None:
+        if scope_name is None:
             scope_name = "Projection"
 
         with tf.variable_scope(scope_name, reuse=tf.AUTO_REUSE):
@@ -149,7 +159,7 @@ class LanguageModel(object):
         if self.project:
             self.output = tf.tensordot(self.output, self.project_W, axes=1)
 
-    def _output_layer(self):
+    def _output_layer(self, scope_name=None):
         """Self explanatory."""
         if scope_name is None:
             scope_name = "Output_layer"
@@ -167,19 +177,23 @@ class LanguageModel(object):
                 shape=[self.len_corpus], dtype=tf.float32, initializer=xav_init()
             )
 
+    # TODO(vsomnath): Loss needs to be fixed to include masking of <pad> tokens
     def _compute_cross_entropy_loss(self):
         """Computes the loss for the LSTM."""
         if not self.built:
             self._build_rnn()
         logits = tf.tensordot(self.output, self.output_layer["weights"], axes=1) # 64 x 29 x 20'000
         logits = tf.add(logits, self.output_layer["bias"]) # bias: 20'000
+
+        # Add mask for pads
         self.cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logits,
-            labels = self.sentence_ph[:,1:]
+            labels=self.sentence_ph[:,1:]
         ) # 64 x 29
-        avg_cross_entropy = tf.reduce_mean(cross_entropy, axis=1) # 64, cross entropy for every sentence
-        self.loss = tf.reduce_mean(avg_cross_entropy) # 1, avg cross entropy. Trains also over <pad> tokens
+        self.avg_cross_entropy = tf.reduce_mean(self.cross_entropy, axis=1) # 64, cross entropy for every sentence
+        self.loss = tf.reduce_mean(self.avg_cross_entropy) # 1, avg cross entropy. Trains also over <pad> tokens
 
+    # TODO(vsomnath): Fix perplexity computations
     def _compute_perplexity(self):
         """Computes perplexity and average."""
         # Have to work with only non-<pad> tokens, zero out other values
@@ -207,76 +221,44 @@ class LanguageModel(object):
             gradients, _ = tf.clip_by_global_norm(gradients, clip_norm=5.0)
             self.optimize_op = self.optimizer.apply_gradients(zip(gradients, variables))
 
-    def fit(self, dataset, num_epochs=10, batch_size=64, verbose=False):
+    def evaluate(self, timestep=None, verbose=False):
+        """Computes loss on the eval dataset."""
+        eval_loss = 0
+        fetches = self.loss
+        n_samples = self.dataset.eval.shape[0]
+
+        for batch in self.dataset.batch_generator(mode="eval", batch_size=n_samples):
+            feed_dict = {self.sentence_ph: batch, self.bs_ph: n_samples}
+            eval_loss += self.session.run(fetches=fetches, feed_dict=feed_dict)
+
+        fetches = self.summary_loss_eval
+        feed_dict = {self.eval_loss_ph: eval_loss / self.dataset.eval.shape[0]}
+        logging_eval_loss = self.session.run(fetches=fetches, feed_dict=feed_dict)
+        self.summary_writer.add_summary(logging_eval_loss, timestep)
+
+        if verbose:
+            print("The Evaluation Loss is {0:.3f}".format(eval_loss))
+
+    def fit(self, num_epochs=10, batch_size=64, eval_every=10, verbose=False):
         """Trains the LSTM."""
-            self.session.run(tf.global_variables_initializer())
-            start_time = time.time()
+        start_time = time.time()
+        for epoch in range(num_epochs):
+            batch_count = 0
+            for train_batch in self.dataset.batch_generator(mode="train",
+                                            batch_size=batch_size, shuffle=True):
+                fetches = [self.loss, self.optimize_op]
+                feed_dict = {self.sentence_ph: train_batch, self.bs_ph: batch_size}
+                timestep = self.dataset.train.shape[0]/batch_size * epoch + batch_count
 
-            # Replace this with a generator function
-            train_batches = get_batches(dataset=dataset.train, batch_size=batch_size)
-            eval_batches = get_batches(dataset=dataset.eval, batch_size=batch_size)
-            test_batches = get_batches(dataset=dataset.test, batch_size=batch_size)
+                loss, _ = self.session.run(fetches=fetches, feed_dict=feed_dict)
+                batch_count += 1
+                logging_loss = self.session.run(self.summary_loss, feed_dict={self.train_loss_ph: loss})
+                self.summary_writer.add_summary(logging_loss, timestep)
 
-            for epoch in range(num_epochs):
-                for train_batch in self.dataset.batch_generator(mode="train", batch_size=batch_size):
-                    fetches = [self.loss, self.optimize_op]
-                    feed_dict = {self.sentence_ph: train_batch, self.batch_ph: batch_size}
+                if (batch_count+1) % 10 == 0:
+                    self.evaluate(timestep=timestep, verbose=verbose)
 
-                    loss, _ = sess.run(
-                        fetches=fetches,
-                        feed_dict=feed_dict
-                    )
-
-                    logging_loss = self.session.run(summary_loss, feed_dict={train_loss_ph: loss})
-                    self.writer.add_summary(logging_loss, timestep)
-
-
-                batch_count = 0
-                shuffled_indices = np.random.permutation(range(len(train_batches)))
-
-                while batch_count < len(train_batches) and (time.time() - start_time) < max_time:
-                    batch_index = shuffled_indices[batch_count]
-                    timestep = train_data.shape[0]/batch_size * epoch + batch_count
-
-                    if (batch_count+1) % 100 == 0:
-                        shuffled_eval = np.random.permutation(range(len(eval_batches)))
-                        num_evaluate = 100 # how many batches do we want to evaluate for evaluation
-                        if verbose:
-                            print("Epoch: {}, Batch: {}".format(epoch+1, batch_index+1))
-                            print("The Training Loss is {0:.3f}".format(loss))
-
-                        eval_perplexity = 0
-                        eval_loss = 0
-                        eval_index = 0
-                        while eval_index < num_evaluate:
-                            shuffled_eval_index = shuffled_eval[eval_index]
-                            cur_perplexity, cur_loss = sess.run(
-                                fetches = [self..perplexity_avg, self..loss],
-                                feed_dict = {self.sentence_ph: eval_batches[shuffled_eval_index]}
-                            )
-                            eval_perplexity += cur_perplexity
-                            eval_loss += cur_loss
-
-                            eval_index += 1
-
-                        eval_perplexity /= num_evaluate # avg perplexity
-                        eval_loss /= num_evaluate # avg loss
-
-                        # write summaries for tensorboard
-                        fetches = [self.summary_loss_eval, self.summary_perplexity]
-                        feed_dict = {self.eval_loss_ph: eval_loss, self.perplexity_ph: eval_perplexity}
-
-                        logging_eval_loss, logging_perplexity = self.session.run(fetches=fetches, feed_dict=feed_dict)
-                        self.writer.add_summary(logging_eval_loss, timestep)
-                        self.writer.add_summary(logging_perplexity, timestep)
-
-                        if verbose:
-                            print("The Evaluation Loss is {0:.3f}".format(eval_loss))
-                            print("The Evaluation Perplexity is {0:.3f} \n".format(eval_perplexity))
-
-                    batch_count += 1
-
-    # create nodes for prediction: caculate next state and word
+    # TODO(vsomnath): Get rid of this and complete "complete_sentences"
     def _predict_nodes(self):
         # User feeds these states every step. First step: all zeros
         self.state_c = tf.placeholder(tf.float32, [1, self.lstm_hidden_size])
@@ -293,3 +275,16 @@ class LanguageModel(object):
 
     def complete_sentences(self):
         pass
+
+    def compute_perplexity(self, batch):
+        fetches = self.perplexity
+        feed_dict = {self.sentence_ph: batch}
+        return self.session.run(fetches, feed_dict)
+
+    def save_perplexity_to_file(self, filename):
+        """Saves perplexity computations to file."""
+        with open(filename, "w") as f:
+            for test_sentence in self.dataset.batch_generator(mode="test",
+            batch_size=1, shuffle=False):
+                perplexity = self.compute_perplexity(test_sentence)
+               f.write(str(perplexity) + "\n")
