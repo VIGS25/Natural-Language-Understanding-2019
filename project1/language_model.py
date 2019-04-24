@@ -278,8 +278,8 @@ class LanguageModel(object):
                         print("Training loss: {0:.3f}".format(loss))
                         print("Training perplexity: {0:.3f}".format(perplexity))
 
-                    self.evaluate(timestep=timestep, verbose=verbose)
-                    print()
+            self.evaluate(timestep=timestep, verbose=verbose)
+            print()
 
             model_savepath = os.path.join(model_dir, "model.ckpt")
             save_path = self.saver.save(sess=self.session, save_path=model_savepath)
