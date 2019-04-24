@@ -65,7 +65,7 @@ def run():
         model.save_perplexity_to_file(filename=perp_savefile)
 
 def experiment_A(args):
-    exp_name = "Experiment_A_" + datetime.now().strftime("%H:%M:%S")
+    exp_name = "Experiment_A_" + datetime.now().strftime("%H-%M-%S")
     exp_logdir = os.path.join(args.log_dir, exp_name)
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
@@ -91,7 +91,7 @@ def experiment_A(args):
     return model
 
 def experiment_B(args):
-    exp_name = "Experiment_B_" + datetime.now().strftime("%H:%M:%S")
+    exp_name = "Experiment_B_" + datetime.now().strftime("%H-%M-%S")
     exp_logdir = os.path.join(args.log_dir, exp_name)
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
@@ -117,7 +117,7 @@ def experiment_B(args):
     return model
 
 def experiment_C(args):
-    exp_name = "Experiment_C_" + datetime.now().strftime("%H:%M:%S")
+    exp_name = "Experiment_C_" + datetime.now().strftime("%H-%M-%S")
     exp_logdir = os.path.join(args.log_dir, exp_name)
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
@@ -144,7 +144,7 @@ def experiment_C(args):
     return model
 
 def experiment_D(args):
-    exp_name = "Experiment_D_" + datetime.now().strftime("%H:%M:%S")
+    exp_name = "Experiment_D_" + datetime.now().strftime("%H-%M-%S")
     exp_logdir = os.path.join(args.log_dir, exp_name)
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
