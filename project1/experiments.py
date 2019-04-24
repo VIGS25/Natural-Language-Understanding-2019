@@ -57,7 +57,7 @@ def run():
     else:
         raise ValueError("Experiment of type {} not found.".format(args.exp_type))
 
-    if args.model_path is None:
+    if args.model_dir is None:
         print("Training model...")
         model.fit(num_epochs=args.num_epochs, batch_size=64, verbose=True)
     else:
@@ -96,11 +96,12 @@ def experiment_B(args):
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
     restore_from = None
-    if args.model_path is not None:
-        restore_from = os.path.join(args.save_dir, args.model_path)
+    if args.model_dir is not None:
+        restore_from = os.path.join(args.model_dir, str(args.restore_epoch), "model.ckpt")
 
+    # Setup experiment log and save directories
     if not os.path.exists(exp_logdir):
-        os.makedirss(exp_logdir)
+        os.makedirs(exp_logdir)
 
     if not os.path.exists(exp_savedir):
         os.makedirs(exp_savedir)
@@ -121,11 +122,12 @@ def experiment_C(args):
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
     restore_from = None
-    if args.model_path is not None:
-        restore_from = os.path.join(args.save_dir, args.model_path)
+    if args.model_dir is not None:
+        restore_from = os.path.join(args.model_dir, str(args.restore_epoch), "model.ckpt")
 
+    # Setup experiment log and save directories
     if not os.path.exists(exp_logdir):
-        os.makedirss(exp_logdir)
+        os.makedirs(exp_logdir)
 
     if not os.path.exists(exp_savedir):
         os.makedirs(exp_savedir)
