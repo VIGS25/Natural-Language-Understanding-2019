@@ -59,7 +59,7 @@ def run():
 
     if args.model_dir is None:
         print("Training model...")
-        model.fit(num_epochs=args.num_epochs, batch_size=64, verbose=True)
+        model.fit(num_epochs=args.num_epochs, eval_every=50, batch_size=64, verbose=True)
     else:
         print("Computing test perplexities...")
         model.save_perplexity_to_file(filename=perp_savefile)
