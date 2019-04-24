@@ -4,12 +4,14 @@ from tensorflow.contrib.rnn import BasicLSTMCell
 from tensorflow.contrib.layers import xavier_initializer as xav_init
 from load_embeddings import load_embedding
 from dataset import Dataset
+import os
 import time
 
 SEED = 42
 
 class LanguageModel(object):
     built = False
+    sen_comp_setup = False
 
     def __init__(self,
                  dataset,
@@ -52,28 +54,20 @@ class LanguageModel(object):
         self.session = tf.Session(graph=graph)
         self.len_corpus = len(dataset.vocab)
         self.time_steps = dataset.train.shape[1] -1
+        self.save_dir = save_dir
 
         with self.session.graph.as_default():
-            self._placeholders()
-            self._embeddings()
+            self._embeddings(pretrained=pretrained)
+            self._compute_cross_entropy_loss()
+            self._optimizer()
+            self._sentence_completion_setup()
             self._savers(log_dir=log_dir)
             self._summaries()
-            self._compute_cross_entropy_loss()
-            self._compute_perplexity()
-            self._optimizer()
 
             if restore_from is not None:
                 self.saver.restore(self.session, restore_from)
             else:
                 self.session.run(tf.global_variables_initializer())
-
-    def _placeholders(self):
-        """Creates placeholders to be used for sentences and words."""
-        self.sentence_ph = tf.placeholder(dtype=tf.int32, shape=[None, self.time_steps + 1], name="Sentence_placeholder")
-        self.bs_ph = tf.placeholder(dtype=tf.int32, shape=[], name="Batch_size_placeholder")
-        self.train_loss_ph = tf.placeholder(tf.float32)
-        self.eval_loss_ph = tf.placeholder(tf.float32)
-        self.perplexity_ph = tf.placeholder(tf.float32)
 
     def _savers(self, log_dir=None):
         """Creates saver and summary writer.
@@ -100,6 +94,9 @@ class LanguageModel(object):
         if not scope_name:
             scope_name = "Embedding"
 
+        self.sentence_ph = tf.placeholder(dtype=tf.int32, shape=[None, self.time_steps + 1],
+                                        name="Sentence_placeholder")
+
         with tf.variable_scope(scope_name, reuse=tf.AUTO_REUSE):
             self.embedding_matrix = tf.get_variable(
                 name="embedding_matrix",
@@ -108,8 +105,9 @@ class LanguageModel(object):
             )
 
             if pretrained:
+                print("Loading pretrained embeddings...")
                 load_embedding(session=self.session,
-                               vocab=self.dataset.vocab,
+                               vocab=self.dataset.word_to_idx,
                                emb=self.embedding_matrix,
                                path=self.dataset.embedding_file,
                                vocab_size=self.len_corpus,
@@ -125,8 +123,9 @@ class LanguageModel(object):
 
         with tf.variable_scope(scope_name, reuse=tf.AUTO_REUSE):
             self.lstm = BasicLSTMCell(num_units=self.lstm_hidden_size)
+            batch_size = tf.shape(self.sentence_ph)[0]
             if not trainable_zero_state:
-                state = self.lstm.zero_state(batch_size=self.bs_ph, dtype=tf.float32)
+                state = self.lstm.zero_state(batch_size=batch_size, dtype=tf.float32)
             else:
                 state = self._trainable_zero_state()
             if self.project:
@@ -177,114 +176,235 @@ class LanguageModel(object):
                 shape=[self.len_corpus], dtype=tf.float32, initializer=xav_init()
             )
 
-    # TODO(vsomnath): Loss needs to be fixed to include masking of <pad> tokens
     def _compute_cross_entropy_loss(self):
-        """Computes the loss for the LSTM."""
+        """Computes the loss for the LSTM. Masks out <pad> tokens from final loss."""
         if not self.built:
+            print("Building the RNN Graph...")
             self._build_rnn()
-        logits = tf.tensordot(self.output, self.output_layer["weights"], axes=1) # 64 x 29 x 20'000
-        logits = tf.add(logits, self.output_layer["bias"]) # bias: 20'000
+        # Expected shape: 64 x 29 x 20000
+        logits = tf.tensordot(self.output, self.output_layer["weights"], axes=1)
+        logits = tf.add(logits, self.output_layer["bias"])
 
-        # Add mask for pads
-        self.cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        #Expected shape: 64 x 29
+        cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=logits,
             labels=self.sentence_ph[:,1:]
-        ) # 64 x 29
-        self.avg_cross_entropy = tf.reduce_mean(self.cross_entropy, axis=1) # 64, cross entropy for every sentence
-        self.loss = tf.reduce_mean(self.avg_cross_entropy) # 1, avg cross entropy. Trains also over <pad> tokens
+        )
 
-    # TODO(vsomnath): Fix perplexity computations
-    def _compute_perplexity(self):
-        """Computes perplexity and average."""
-        # Have to work with only non-<pad> tokens, zero out other values
-        pads = tf.equal(self.sentence_ph[:,1:], 2)
-        pad1s = tf.cast(pads, tf.int32)
-        sentence_lengths = self.time_steps - tf.reduce_sum(pad1s, axis=1)
-        sentence_lengths = tf.cast(sentence_lengths, dtype=tf.float32)
-        # cross entropy, filled with 0s where sentence ends
-        filtered_cross_entropy = tf.where(pads, tf.zeros_like(self.cross_entropy), self.cross_entropy) # 64 x 29
-        self.perplexity = tf.reduce_sum(filtered_cross_entropy, axis=1)/sentence_lengths # 64
-        self.perplexity = tf.exp(self.perplexity) # 64, perplexity for all sentences
-        self.perplexity_avg = tf.reduce_mean(self.perplexity) # 1, avg perplexity
+        # Include a mask that filters out the pad tokens from the loss computation.
+        pad_index = self.dataset.word_to_idx["<pad>"]
+        # Mask Tensor, with 0s whereever <pad> token is present
+        self.not_pads = tf.not_equal(self.sentence_ph[:, 1:], 2)
+        self.not_pads = tf.cast(self.not_pads, cross_entropy.dtype)
+
+        self.cross_entropy_masked = tf.multiply(cross_entropy, self.not_pads)
+        self.sentence_lengths = tf.reduce_sum(self.not_pads, axis=1)
+        # Expected shape: (64, )
+        cross_entropy_batch = tf.reduce_sum(self.cross_entropy_masked, axis=1)
+        self.batch_loss = cross_entropy_batch / self.sentence_lengths
+        self.batch_perplexity = tf.exp(self.batch_loss)
+        self.loss_avg = tf.reduce_mean(self.batch_loss)
+        self.perplexity_avg = tf.reduce_mean(self.batch_perplexity) # Batch averaged perplexity
 
     def _summaries(self):
         """Creates summaries to log."""
-        self.summary_loss = tf.summary.scalar('loss training', self.train_loss_ph)
-        self.summary_loss_eval = tf.summary.scalar('loss evaluation', self.eval_loss_ph)
-        self.summary_perplexity = tf.summary.scalar('perplexity evaluation', self.perplexity_ph)
+        # Train summaries
+        self.train_loss_summary = tf.summary.scalar('train/batch_averaged_loss', self.loss_avg)
+        self.train_perplexity_summary = tf.summary.scalar('train/batch_averaged_perplexity', self.perplexity_avg)
+        train_summaries = [self.train_loss_summary, self.train_perplexity_summary]
+        self.train_summaries = tf.summary.merge(train_summaries, name="train_summaries")
+
+        # Test summaries
+        self.eval_loss_ph = tf.placeholder(tf.float32)
+        self.eval_perplexity_ph = tf.placeholder(tf.float32)
+        self.eval_loss_summary = tf.summary.scalar('eval/averaged_loss', self.eval_loss_ph)
+        self.eval_perplexity_summary = tf.summary.scalar('eval/averaged_perplexity', self.eval_perplexity_ph)
+        eval_summaries = [self.eval_loss_summary, self.eval_perplexity_summary]
+        self.eval_summaries = tf.summary.merge(eval_summaries, name="eval_summaries")
 
     def _optimizer(self):
         """Defines the optimizer."""
         with tf.variable_scope("Optimizer", reuse=tf.AUTO_REUSE):
             self.optimizer = tf.train.AdamOptimizer()
-            gradients, variables = zip(*self.optimizer.compute_gradients(self.loss))
+            gradients, variables = zip(*self.optimizer.compute_gradients(self.loss_avg))
             gradients, _ = tf.clip_by_global_norm(gradients, clip_norm=5.0)
             self.optimize_op = self.optimizer.apply_gradients(zip(gradients, variables))
 
-    def evaluate(self, timestep=None, verbose=False):
-        """Computes loss on the eval dataset."""
-        eval_loss = 0
-        fetches = self.loss
-        n_samples = self.dataset.eval.shape[0]
+    def evaluate(self, batch_size=64, timestep=None, verbose=False):
+        """Computes loss and perplexity on the eval dataset."""
+        losses, perplexities = [], []
+        fetches = [self.batch_loss, self.batch_perplexity]
 
-        for batch in self.dataset.batch_generator(mode="eval", batch_size=n_samples):
-            feed_dict = {self.sentence_ph: batch, self.bs_ph: n_samples}
-            eval_loss += self.session.run(fetches=fetches, feed_dict=feed_dict)
+        print("Computing statistics on eval data...")
+        for batch in self.dataset.batch_generator(mode="eval", batch_size=batch_size):
+            feed_dict = {self.sentence_ph: batch}
+            batch_loss, batch_perplexity = self.session.run(fetches=fetches, feed_dict=feed_dict)
+            losses.extend(batch_loss)
+            perplexities.extend(batch_perplexity)
 
-        fetches = self.summary_loss_eval
-        feed_dict = {self.eval_loss_ph: eval_loss / self.dataset.eval.shape[0]}
-        logging_eval_loss = self.session.run(fetches=fetches, feed_dict=feed_dict)
-        self.summary_writer.add_summary(logging_eval_loss, timestep)
+        mean_eval_loss = np.mean(losses)
+        mean_eval_perplexity = np.mean(perplexities)
+
+        fetches = self.eval_summaries
+        feed_dict = {self.eval_loss_ph: mean_eval_loss,
+                     self.eval_perplexity_ph: mean_eval_perplexity}
+        eval_summaries = self.session.run(fetches=fetches, feed_dict=feed_dict)
+        self.summary_writer.add_summary(eval_summaries, timestep)
 
         if verbose:
-            print("The Evaluation Loss is {0:.3f}".format(eval_loss))
+            print("Evaluation Loss: {0:.3f}".format(mean_eval_loss))
+            print("Evaluation Perplexity: {0:.3f}".format(mean_eval_perplexity))
 
     def fit(self, num_epochs=10, batch_size=64, eval_every=10, verbose=False):
         """Trains the LSTM."""
         start_time = time.time()
         for epoch in range(num_epochs):
-            batch_count = 0
-            for train_batch in self.dataset.batch_generator(mode="train",
-                                            batch_size=batch_size, shuffle=True):
-                fetches = [self.loss, self.optimize_op]
-                feed_dict = {self.sentence_ph: train_batch, self.bs_ph: batch_size}
-                timestep = self.dataset.train.shape[0]/batch_size * epoch + batch_count
 
-                loss, _ = self.session.run(fetches=fetches, feed_dict=feed_dict)
-                batch_count += 1
-                logging_loss = self.session.run(self.summary_loss, feed_dict={self.train_loss_ph: loss})
-                self.summary_writer.add_summary(logging_loss, timestep)
+            model_dir =os.path.join(self.save_dir, "models", str(epoch+1))
+            if not os.path.exists(model_dir):
+                os.makedirs(model_dir)
 
-                if (batch_count+1) % 10 == 0:
+            for n_batch, train_batch in enumerate(self.dataset.batch_generator(mode="train", batch_size=batch_size, shuffle=True)):
+                fetches = [self.loss_avg, self.perplexity_avg, self.optimize_op, self.train_summaries]
+                feed_dict = {self.sentence_ph: train_batch}
+                timestep = self.dataset.train.shape[0]/batch_size * epoch + n_batch
+
+                loss, perplexity, _, train_summaries = self.session.run(fetches=fetches, feed_dict=feed_dict)
+
+                if (n_batch + 1) % eval_every == 0:
+                    self.summary_writer.add_summary(train_summaries, timestep)
+                    if verbose:
+                        print("Epoch {}, Batch: {}".format(epoch+1, n_batch+1))
+                        print("Training loss: {0:.3f}".format(loss))
+                        print("Training perplexity: {0:.3f}".format(perplexity))
+
                     self.evaluate(timestep=timestep, verbose=verbose)
+                    print()
 
-    # TODO(vsomnath): Get rid of this and complete "complete_sentences"
-    def _predict_nodes(self):
-        # User feeds these states every step. First step: all zeros
+            model_savepath = os.path.join(model_dir, "model.ckpt")
+            save_path = self.saver.save(sess=self.session, save_path=model_savepath)
+
+    def _sentence_completion_setup(self):
+        """Setup for the sentence completion task."""
         self.state_c = tf.placeholder(tf.float32, [1, self.lstm_hidden_size])
         self.state_h = tf.placeholder(tf.float32, [1, self.lstm_hidden_size])
+        self.word_ph = tf.placeholder(dtype=tf.int32, shape=[1], name="Word_placeholder")
+        self.word_embedding = tf.nn.embedding_lookup(self.embedding_matrix, self.word_ph)
+
         state = tf.contrib.rnn.LSTMStateTuple(self.state_c, self.state_h)
-        out, self.next_state = self.lstm(self.embedding_word, state)
+        out, self.next_state = self.lstm(self.word_embedding, state)
+
         if(self.project):
-            out = tf.matmul(out, self.projection['Weights'])
-        logits = tf.matmul(out, self.output_layer['Weights']) + self.output_layer['Bias']
-        self.logits = tf.reshape(logits, [20000])
+            out = tf.matmul(out, self.projection["weights"])
+        logits_word = tf.matmul(out, self.output_layer["weights"])
+        logits_word = tf.add(logits_word, self.output_layer["bias"])
+        self.logits = tf.reshape(logits_word, [20000])
+        self.sen_comp_setup = True
 
-    def complete_sentence(self, words, max_len):
-        pass
+    # TODO (vsomnath): This could still be a little buggy.
+    def complete_sentence(self, words, max_len=20):
+        """Completes a sentence, given the initial words.
 
-    def complete_sentences(self):
-        pass
+        Parameters
+        ----------
+        words: list,
+            List of starting words
+        max_len: int, default 20
+            Maximum length of sentence if <eos> is not generated.
+        """
+        words_copied = words.copy()
+        words_copied.insert(0, "<bos>")
+
+        sentence = list()
+        state_c = np.zeros((1, self.lstm_hidden_size))
+        state_h = np.zeros((1, self.lstm_hidden_size))
+        word_predicted = None
+
+        step = 0
+        sentence_length = 0
+        unk_idx = self.dataset.word_to_idx["<unk>"]
+
+        while (sentence_length < max_len and word_predicted != "<eos>"):
+            if sentence_length < len(words_copied):
+                word = words_copied[step]
+            else:
+                word = word_predicted
+            word_idx = self.dataset.word_to_idx.get(word, unk_idx)
+
+            fetches = [self.next_state, self.logits]
+            word_idx_array = np.array([word_idx])
+            feed_dict = {self.word_ph: word_idx_array,
+                         self.state_c: state_c,
+                         self.state_h: state_h}
+            state, logits = self.session.run(fetches, feed_dict)
+            state_c, state_h = (state.c, state.h)
+
+            # Decide next word
+            logits[0] = np.finfo(float).min
+            logits[2:4] = np.finfo(float).min
+            word_predicted = self.dataset.idx_to_word[np.argmax(logits)]
+
+            if sentence_length < len(words_copied) - 1:
+                sentence.append(words_copied[step + 1])
+            else:
+                sentence.append(word_predicted)
+
+            step += 1
+            sentence_length += 1
+        sentence = " ".join([pred_word for pred_word in sentence])
+        return sentence
+
+    def complete_sentences(self, data_filename, sol_filename, max_len=20, log_every=100):
+        """Completes the sentences in given file.
+
+        Parameters
+        ----------
+        data_filename: str,
+            Filename containing the sentences to complete
+        sol_filename: str,
+            Filename to write the completed sentence to
+        max_len: int, default 20
+            Maximum allowed length of sentence.
+        """
+        if not self.sen_comp_setup:
+            self._sentence_completion_setup()
+
+        print("Starting to write sentences...")
+        f1 = open(sol_filename, "w")
+        f2 = open(data_filename, "r")
+        num_lines = 0
+        for idx, sentence in enumerate(f2.readlines()):
+            words = sentence.split(" ")
+            completed_sentence = self.complete_sentence(words, max_len=max_len)
+            f1.write(completed_sentence + "\n")
+            num_lines += 1
+            if num_lines % log_every == 0:
+                print("Finished writing {} sentences.".format(num_lines))
+        f1.close()
+        f2.close()
+        print("Finished writing sentences.")
 
     def compute_perplexity(self, batch):
-        fetches = self.perplexity
+        """Wrapper function to compute batch perplexity, one for each sentence."""
+        fetches = self.perplexity_avg
         feed_dict = {self.sentence_ph: batch}
         return self.session.run(fetches, feed_dict)
 
-    def save_perplexity_to_file(self, filename):
-        """Saves perplexity computations to file."""
+    def save_perplexity_to_file(self, filename, log_every=100):
+        """Saves perplexity computations to file.
+
+        Parameters
+        ----------
+        Filename: str,
+            File to write perplexity values to
+        """
+        print("Starting to save perplexity values...")
         with open(filename, "w") as f:
-            for test_sentence in self.dataset.batch_generator(mode="test",
-            batch_size=1, shuffle=False):
+            num_lines = 0
+            for idx, test_sentence in enumerate(self.dataset.batch_generator(mode="test", batch_size=1, shuffle=False)):
                 perplexity = self.compute_perplexity(test_sentence)
-               f.write(str(perplexity) + "\n")
+                f.write(str(perplexity) + "\n")
+                num_lines += 1
+                if num_lines % log_every == 0:
+                    print("Finished calculating perplexity for {} sentences.".format(num_lines))
+        print("Finished writing perplexity values.")

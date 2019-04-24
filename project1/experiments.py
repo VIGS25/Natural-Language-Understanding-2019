@@ -14,7 +14,9 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 LOG_DIR = os.path.join(os.path.dirname(__file__), "checkpoints")
 SAVE_DIR = os.path.join(os.path.dirname(__file__), "results")
-PERP_FILE_BASENAME = "group22.perplexity"
+SAVE_BASENAME = "group22."
+PERP_FILE_BASENAME = SAVE_BASENAME + "perplexity"
+CONTINUATION_FILE = "sentences.continuation"
 
 def run():
     """Runs the specified experiment."""
@@ -23,15 +25,18 @@ def run():
     parser.add_argument("--in_dir", dest="input_dir", default=DATA_DIR, help="input directory")
     parser.add_argument("--save_dir", dest="save_dir", default=SAVE_DIR, help="Save results to")
     parser.add_argument("--log_dir", dest="log_dir", default=LOG_DIR, help="Directory to save checkpoints to.")
+    parser.add_argument("--max_length", type=int, default=30, help="Maximum length of sentence for parsing.")
     parser.add_argument("--exp_type", default="a", help="Which experiment to run")
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of epochs used.")
-    parser.add_argument("--model_path", default=None, help="Saved model path.")
+    parser.add_argument("--restore_epoch", type=int, default=10, help="Epoch to restore model from.")
+    parser.add_argument("--model_dir", default=None, help="Saved model path.")
     args = parser.parse_args()
 
     if not os.path.exists(args.input_dir):
         raise DirectoryNotFoundError("Input directory is missing. Please set it up and download the data.")
 
     global dataset
+    print("Preparing dataset...")
     dataset = Dataset(input_dir=args.input_dir)
     dataset.generate_vocab(max_sen_len=args.max_length, topk=20000, save=True)
     dataset.parse_train(max_sen_length=args.max_length, save=True, reload=True)
@@ -56,7 +61,7 @@ def run():
         print("Training model...")
         model.fit(num_epochs=args.num_epochs, batch_size=64, verbose=True)
     else:
-        print("Computing test perplexities.")
+        print("Computing test perplexities...")
         model.save_perplexity_to_file(filename=perp_savefile)
 
 def experiment_A(args):
@@ -65,15 +70,22 @@ def experiment_A(args):
     exp_savedir = os.path.join(args.save_dir, exp_name)
 
     restore_from = None
-    if args.model_path is not None:
-        restore_from = os.path.join(args.save_dir, args.model_path)
+    if args.model_dir is not None:
+        restore_from = os.path.join(args.model_dir, str(args.restore_epoch), "model.ckpt")
 
+    # Setup experiment log and save directories
     if not os.path.exists(exp_logdir):
         os.makedirs(exp_logdir)
 
-    model = LanguageModel(dataset=dataset, lstm_hidden_size=512,
-                          embedding_size=100, project=False,
-                          pretrained=False, save_dir=exp_savedir,
+    if not os.path.exists(exp_savedir):
+        os.makedirs(exp_savedir)
+
+    model = LanguageModel(dataset=dataset,
+                          lstm_hidden_size=512,
+                          embedding_size=100,
+                          project=False,
+                          pretrained=False,
+                          save_dir=exp_savedir,
                           log_dir=exp_logdir,
                           restore_from=restore_from)
     return model
@@ -88,7 +100,10 @@ def experiment_B(args):
         restore_from = os.path.join(args.save_dir, args.model_path)
 
     if not os.path.exists(exp_logdir):
-        os.makedirs(exp_logdir)
+        os.makedirss(exp_logdir)
+
+    if not os.path.exists(exp_savedir):
+        os.makedirs(exp_savedir)
 
     model = LanguageModel(dataset=dataset,
                           lstm_hidden_size=512,
@@ -110,7 +125,10 @@ def experiment_C(args):
         restore_from = os.path.join(args.save_dir, args.model_path)
 
     if not os.path.exists(exp_logdir):
-        os.makedirs(exp_logdir)
+        os.makedirss(exp_logdir)
+
+    if not os.path.exists(exp_savedir):
+        os.makedirs(exp_savedir)
 
     model = LanguageModel(dataset=dataset,
                           lstm_hidden_size=1024,
@@ -124,10 +142,16 @@ def experiment_C(args):
     return model
 
 def experiment_D(args):
-    exp_name = "Experiment_C_" + datetime.now().strftime("%H:%M:%S")
+    exp_name = "Experiment_D_" + datetime.now().strftime("%H:%M:%S")
     exp_logdir = os.path.join(args.log_dir, exp_name)
     exp_savedir = os.path.join(args.save_dir, exp_name)
-    restore_from = os.path.join(args.save_dir, args.model_path)
+
+    if args.model_dir is None:
+        raise ValueError("Experiment D requires a trained model. Please supply the directory.")
+    restore_from = os.path.join(args.model_dir, str(args.restore_epoch), "model.ckpt")
+
+    data_filename = os.path.join(args.input_dir, CONTINUATION_FILE)
+    sol_filename = SAVE_BASENAME + "continuation"
 
     model = LanguageModel(dataset=dataset,
                           lstm_hidden_size=1024,
@@ -136,10 +160,10 @@ def experiment_D(args):
                           project_size=512,
                           pretrained=True,
                           log_dir=exp_logdir,
-                          save_dir=exp_savedir,
+                          save_dir=None,
                           restore_from=restore_from)
 
-    model.complete_sentences(dataset.continuation, max_len=20)
+    model.complete_sentences(data_filename, sol_filename, max_len=20, log_every=1000)
 
 if __name__ == "__main__":
     run()

@@ -8,7 +8,8 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 TRAIN_FILE = "sentences.train"
 EVAL_FILE = "sentences.eval"
 TEST_FILE = "sentences_test.txt"
-EMBEDDING_FILE = ""
+
+EMBEDDING_FILE = "wordembeddings-dim100.word2vec"
 BASE_VOCAB  = ["<bos>", "<eos>", "<pad>", "<unk>"]
 
 SAVE_TRAIN = "train.pkl"
@@ -27,7 +28,7 @@ class Dataset(object):
     eval = None
     continuation = None
 
-    def __init__(self, input_dir, embed_file, save_dir=None, **kwargs):
+    def __init__(self, input_dir, embed_file=None, save_dir=None, **kwargs):
         """
         Parameters
         ----------
@@ -43,7 +44,11 @@ class Dataset(object):
             self.save_dir = input_dir
         else:
             self.save_dir = save_dir
-        self.embedding_file = os.path.join(input_dir, embed_file)
+
+        if embed_file is not None:
+            self.embedding_file = os.path.join(input_dir, embed_file)
+        else:
+            self.embedding_file = os.path.join(input_dir, EMBEDDING_FILE)
 
     def generate_vocab(self, max_sen_len=30, topk=20000, save=False):
         """Generates the vocabulary used.
