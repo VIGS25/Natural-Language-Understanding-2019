@@ -21,7 +21,7 @@ class LanguageModel(object):
                  project_size=512,
                  project=False,
                  restore_from=None,
-                 save_dir=None,
+                 model_dir=None,
                  log_dir=None):
         """
         Parameters
@@ -38,7 +38,7 @@ class LanguageModel(object):
             Final size to project to
         restore_from: str, default None
             Path to restore model from
-        save_dir: str, default None
+        model_dir: str, default None
             Directory to save model to
         log_dir: str, default None
             Directory to write summaries to
@@ -54,7 +54,7 @@ class LanguageModel(object):
         self.session = tf.Session(graph=graph)
         self.len_corpus = len(dataset.vocab)
         self.time_steps = dataset.train.shape[1] -1
-        self.save_dir = save_dir
+        self.model_dir = model_dir
 
         with self.session.graph.as_default():
             self._embeddings(pretrained=pretrained)
@@ -235,7 +235,6 @@ class LanguageModel(object):
         losses, perplexities = [], []
         fetches = [self.batch_loss, self.batch_perplexity]
 
-        print("Computing statistics on eval data...")
         for batch in self.dataset.batch_generator(mode="eval", batch_size=batch_size):
             feed_dict = {self.sentence_ph: batch}
             batch_loss, batch_perplexity = self.session.run(fetches=fetches, feed_dict=feed_dict)
@@ -259,10 +258,9 @@ class LanguageModel(object):
         """Trains the LSTM."""
         start_time = time.time()
         for epoch in range(num_epochs):
-
-            model_dir =os.path.join(self.save_dir, "models", str(epoch+1))
-            if not os.path.exists(model_dir):
-                os.makedirs(model_dir)
+            model_dir_epoch = os.path.join(self.model_dir, "models", str(epoch+1))
+            if not os.path.exists(model_dir_epoch):
+                os.makedirs(model_dir_epoch)
 
             for n_batch, train_batch in enumerate(self.dataset.batch_generator(mode="train", batch_size=batch_size, shuffle=True)):
                 fetches = [self.loss_avg, self.perplexity_avg, self.optimize_op, self.train_summaries]
@@ -278,10 +276,11 @@ class LanguageModel(object):
                         print("Training loss: {0:.3f}".format(loss))
                         print("Training perplexity: {0:.3f}".format(perplexity))
 
+            print("Computing loss and perplexity on eval data. Epoch {}, Timestep: {}".format(epoch+1, timestep))
             self.evaluate(timestep=timestep, verbose=verbose)
             print()
 
-            model_savepath = os.path.join(model_dir, "model.ckpt")
+            model_savepath = os.path.join(model_dir_epoch, "model.ckpt")
             save_path = self.saver.save(sess=self.session, save_path=model_savepath)
 
     def _sentence_completion_setup(self):
