@@ -79,7 +79,7 @@ class LanguageModel(object):
         """
         self.summary_writer = tf.summary.FileWriter(log_dir)
         self.summary_writer.add_graph(self.session.graph)
-        self.saver = tf.train.Saver()
+        self.saver = tf.train.Saver(max_to_keep=1000)
 
     def _embeddings(self, pretrained=False, scope_name=None):
         """Compute word embeddings for sentence.
