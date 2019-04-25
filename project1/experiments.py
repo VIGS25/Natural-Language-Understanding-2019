@@ -121,7 +121,7 @@ def experiment_B(args):
                           embedding_size=100,
                           project=False,
                           pretrained=True,
-                          model_dir=exp_savedir,
+                          model_dir=exp_modeldir,
                           log_dir=exp_logdir,
                           restore_from=restore_from)
     return model
