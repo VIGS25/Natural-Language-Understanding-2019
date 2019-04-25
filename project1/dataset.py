@@ -111,7 +111,7 @@ class Dataset(object):
         words.insert(0, "<bos>")
         words.append("<eos>")
 
-        if(len(words) <= max_sen_length - 2):
+        if(len(words) <= max_sen_length):
             words = self.pad(words, padded_len=max_sen_length)
             for w in words:
                 if w in self.vocab:
@@ -123,7 +123,7 @@ class Dataset(object):
 
         return line, parsed
 
-    def parse_train(self, max_sen_length=30, verbose=False, save=False, reload=True):
+    def parse_train(self, max_sen_length=30, verbose=False, save=False, reload=False):
         """Parses training sentences.
 
         Parameters
@@ -140,7 +140,7 @@ class Dataset(object):
         self.train = self.parse_sentences(mode="train", max_sen_length=max_sen_length,
                                           verbose=verbose, save=save, reload=reload)
 
-    def parse_test(self, max_sen_length=30, verbose=False, save=False, reload=True):
+    def parse_test(self, max_sen_length=30, verbose=False, save=False, reload=False):
         """Parses test sentences.
 
         Parameters
@@ -157,7 +157,7 @@ class Dataset(object):
         self.test = self.parse_sentences(mode="test", max_sen_length=max_sen_length,
                                          verbose=verbose, save=save, reload=reload)
 
-    def parse_eval(self, max_sen_length=30, verbose=False, save=False, reload=True):
+    def parse_eval(self, max_sen_length=30, verbose=False, save=False, reload=False):
         """Parses eval sentences.
 
         Parameters
@@ -174,7 +174,7 @@ class Dataset(object):
         self.eval = self.parse_sentences(mode="eval", max_sen_length=max_sen_length,
                                          verbose=verbose, save=save, reload=reload)
 
-    def parse_sentences(self, mode="train", max_sen_length=30, verbose=False, save=False, reload=True):
+    def parse_sentences(self, mode="train", max_sen_length=30, verbose=False, save=False, reload=False):
         """Parses sentences depending on mode specified.
 
         Parameters
