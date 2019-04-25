@@ -258,7 +258,7 @@ class LanguageModel(object):
         """Trains the LSTM."""
         start_time = time.time()
         for epoch in range(num_epochs):
-            model_dir_epoch = os.path.join(self.model_dir, "models", str(epoch+1))
+            model_dir_epoch = os.path.join(self.model_dir, str(epoch+1))
             if not os.path.exists(model_dir_epoch):
                 os.makedirs(model_dir_epoch)
 
