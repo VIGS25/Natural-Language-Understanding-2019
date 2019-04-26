@@ -1,4 +1,3 @@
-
 ## Project 1 - Natural Language Understanding 2019
 
 ### Group 22: Akmaral Yessenalina, Vignesh Ram Somnath, Ritu Sriram, Meet Vora
@@ -38,3 +37,4 @@ For conditional generation, run:
 python3 -m experiments --exp_type d --restore_name Experiment_C_XX_XX_XX --restore_epoch EPOCH_NUM
 ```
 
+where `XX_XX_XX` is the desired timestamp for Experiment C
