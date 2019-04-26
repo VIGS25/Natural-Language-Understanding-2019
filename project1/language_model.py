@@ -300,7 +300,6 @@ class LanguageModel(object):
         self.logits = tf.reshape(logits_word, [20000])
         self.sen_comp_setup = True
 
-    # TODO (vsomnath): This could still be a little buggy.
     def complete_sentence(self, words, max_len=20):
         """Completes a sentence, given the initial words.
 
@@ -319,15 +318,29 @@ class LanguageModel(object):
         state_h = np.zeros((1, self.lstm_hidden_size))
         word_predicted = None
 
-        step = 0
         sentence_length = 0
         unk_idx = self.dataset.word_to_idx["<unk>"]
 
+        for word in words_copied:
+            sentence.append(word)
+            word_idx = self.dataset.word_to_idx.get(word, unk_idx)
+
+            fetches = [self.next_state, self.logits]
+            word_idx_array = np.array([word_idx])
+            feed_dict = {self.word_ph: word_idx_array,
+                         self.state_c: state_c,
+                         self.state_h: state_h}
+            state, logits = self.session.run(fetches, feed_dict)
+            state_c, state_h = (state.c, state.h)
+
+            logits[0] = np.finfo(float).min
+            logits[2:4] = np.finfo(float).min
+            word_predicted = self.dataset.idx_to_word[np.argmax(logits)]
+
+        sentence_length = len(sentence) - 1
+
         while (sentence_length < max_len and word_predicted != "<eos>"):
-            if sentence_length < len(words_copied):
-                word = words_copied[step]
-            else:
-                word = word_predicted
+            word = word_predicted
             word_idx = self.dataset.word_to_idx.get(word, unk_idx)
 
             fetches = [self.next_state, self.logits]
@@ -343,14 +356,9 @@ class LanguageModel(object):
             logits[2:4] = np.finfo(float).min
             word_predicted = self.dataset.idx_to_word[np.argmax(logits)]
 
-            if sentence_length < len(words_copied) - 1:
-                sentence.append(words_copied[step + 1])
-            else:
-                sentence.append(word_predicted)
-
-            step += 1
+            sentence.append(word_predicted)
             sentence_length += 1
-        sentence = " ".join([pred_word for pred_word in sentence])
+        sentence = " ".join(sentence[1:])
         return sentence
 
     def complete_sentences(self, data_filename, sol_filename, max_len=20, log_every=100):
@@ -373,7 +381,7 @@ class LanguageModel(object):
         f2 = open(data_filename, "r")
         num_lines = 0
         for idx, sentence in enumerate(f2.readlines()):
-            words = sentence.split(" ")
+            words = sentence.strip().split(" ")
             completed_sentence = self.complete_sentence(words, max_len=max_len)
             f1.write(completed_sentence + "\n")
             num_lines += 1
