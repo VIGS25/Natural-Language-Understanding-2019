@@ -3,4 +3,5 @@ data/
 logs/
 models/
 
-
+#Submission file
+*.zip
