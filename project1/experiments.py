@@ -80,12 +80,13 @@ def experiment_A(args):
                                     str(args.restore_epoch),
                                     "model.ckpt")
 
-    # Setup experiment log and save directories
-    if not os.path.exists(exp_logdir):
-        os.makedirs(exp_logdir)
+    if args.restore_name is None:
+        # Setup experiment log and save directories
+        if not os.path.exists(exp_logdir):
+            os.makedirs(exp_logdir)
 
-    if not os.path.exists(exp_modeldir):
-        os.makedirs(exp_modeldir)
+        if not os.path.exists(exp_modeldir):
+            os.makedirs(exp_modeldir)
 
     model = LanguageModel(dataset=dataset,
                           lstm_hidden_size=512,
@@ -109,12 +110,13 @@ def experiment_B(args):
                                     str(args.restore_epoch),
                                     "model.ckpt")
 
-    # Setup experiment log and save directories
-    if not os.path.exists(exp_logdir):
-        os.makedirs(exp_logdir)
+    if args.restore_name is None:
+        # Setup experiment log and save directories
+        if not os.path.exists(exp_logdir):
+            os.makedirs(exp_logdir)
 
-    if not os.path.exists(exp_modeldir):
-        os.makedirs(exp_modeldir)
+        if not os.path.exists(exp_modeldir):
+            os.makedirs(exp_modeldir)
 
     model = LanguageModel(dataset=dataset,
                           lstm_hidden_size=512,
@@ -138,12 +140,13 @@ def experiment_C(args):
                                     str(args.restore_epoch),
                                     "model.ckpt")
 
-    # Setup experiment log and save directories
-    if not os.path.exists(exp_logdir):
-        os.makedirs(exp_logdir)
+    if args.restore_name is None:
+        # Setup experiment log and save directories
+        if not os.path.exists(exp_logdir):
+            os.makedirs(exp_logdir)
 
-    if not os.path.exists(exp_modeldir):
-        os.makedirs(exp_modeldir)
+        if not os.path.exists(exp_modeldir):
+            os.makedirs(exp_modeldir)
 
     model = LanguageModel(dataset=dataset,
                           lstm_hidden_size=1024,
