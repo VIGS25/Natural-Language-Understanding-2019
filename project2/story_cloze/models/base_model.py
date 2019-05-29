@@ -137,7 +137,7 @@ class Model(object):
         timestep = self._get_tf_object("Session").run(self._get_tf_object("GlobalStep"))
 
         if verbose:
-            logger.info("Epoch Num: {}, TimeStep: {}, Eval Accuracy: {}".format(epoch, timestep, eval_accuracy))
+            logger.info("Epoch Num: {0:d}, TimeStep: {1:d}, Eval Accuracy: {2:.3f}".format(epoch, timestep, eval_accuracy))
             logger.info("\n")
 
         fetches = self.merged_eval_summaries
