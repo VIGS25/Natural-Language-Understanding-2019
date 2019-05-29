@@ -10,6 +10,7 @@ import os
 from .base_model import Model
 from typing import List, Dict, Tuple
 import time
+import logging
 
 DEF_MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../outputs"))
 
@@ -24,6 +25,8 @@ def get_rnn_cell(rnn_type="gru", num_hidden_units=1000):
     else:
         raise ValueError("RNN type {} not supported.".format(RNN))
 
+logger = logging.getLogger(__name__)
+
 class RNN(Model):
 
     model_dir = DEF_MODEL_DIR
@@ -37,6 +40,7 @@ class RNN(Model):
     eval2_outputs = list()
 
     def __init__(self,
+                 encoder,
                  embedding_dim: int,
                  n_story_sentences: int = 4,
                  learning_rate: float = 0.001,
@@ -69,6 +73,7 @@ class RNN(Model):
         restore_from: str, default None
             Restore saved model from
         """
+        self.encoder = encoder
         self.embedding_dim = embedding_dim
         self.n_story_sentences = n_story_sentences
         self.rnn_type = rnn_type
@@ -87,7 +92,7 @@ class RNN(Model):
         """Builds placeholders needed for training."""
         self.input_ph = tf.placeholder(dtype=tf.float32, name='Inputs',
                                       shape=[None, self.n_story_sentences + 1, self.embedding_dim])
-        print("Input Story: ", self.input_ph.shape.as_list())
+        logger.info("Input Story: ", self.input_ph.shape.as_list())
         self.labels_ph = tf.placeholder(dtype=tf.float32, name='Labels', shape=[None, 1])
         self.batch_size = tf.shape(self.input_ph)[0]
 
@@ -102,8 +107,8 @@ class RNN(Model):
         self.eval_act1_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='Eval_act1')
         self.eval_act2_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1], name="Eval_act2")
 
-        print("Eval input1: ", self.eval_in1.shape)
-        print("Eval input2: ", self.eval_in2.shape)
+        logger.info("Eval input1: ", self.eval_in1.shape)
+        logger.info("Eval input2: ", self.eval_in2.shape)
 
     def _unroll_rnn_cell(self, state, mode="train"):
         """Unrolls the RNN cell."""
@@ -143,14 +148,14 @@ class RNN(Model):
     def _build_fc_layer(self, inputs, reuse=tf.AUTO_REUSE):
         with tf.variable_scope("FC", reuse=reuse):
             logits = tf.layers.dense(inputs, units=1, activation=None, name="output")
-            print("FC output: ", logits.shape.as_list())
+            logger.info("FC output: ", logits.shape.as_list())
 
         return logits
 
     def _compute_loss(self, mode="train"):
         if mode == "train":
             rnn_final_state = self.train_states[-1]
-            print("Final RNN hidden state: ", rnn_final_state.shape.as_list())
+            logger.info("Final RNN hidden state: ", rnn_final_state.shape.as_list())
             assert rnn_final_state.shape.as_list()[-1] == self.num_hidden_units
 
             self.train_logits = self._build_fc_layer(inputs=rnn_final_state, reuse=tf.AUTO_REUSE)
@@ -166,9 +171,9 @@ class RNN(Model):
             rnn_final_state1 = self.eval1_states[-1]
             rnn_final_state2 = self.eval2_states[-1]
 
-            print("Final RNN hidden state1: ", rnn_final_state1.shape.as_list())
+            logger.info("Final RNN hidden state1: ", rnn_final_state1.shape.as_list())
             assert rnn_final_state1.shape.as_list()[-1] == self.num_hidden_units
-            print("Final RNN hidden state2: ", rnn_final_state2.shape.as_list())
+            logger.info("Final RNN hidden state2: ", rnn_final_state2.shape.as_list())
             assert rnn_final_state2.shape.as_list()[-1] == self.num_hidden_units
 
             self.eval_logits1 = self._build_fc_layer(inputs=rnn_final_state1, reuse=True)
@@ -190,9 +195,18 @@ class RNN(Model):
 
     def _evaluate_batch(self, eval_sentences):
         """Computes metrics on eval batches."""
-        eval_story = eval_sentences[:, :self.n_story_sentences]
-        eval_ending1 = eval_sentences[:, self.n_story_sentences]
-        eval_ending2 = eval_sentences[:, self.n_story_sentences + 1]
+
+        eval_sentences_list = eval_sentences.tolist()
+        encoded_eval = list()
+
+        for story in eval_sentences_list:
+            encoded_eval.append(self.encoder.encode_sentences(story))
+
+        encoded_eval = np.array(encoded_eval)
+
+        eval_story = encoded_eval[:, :self.n_story_sentences]
+        eval_ending1 = encoded_eval[:, self.n_story_sentences]
+        eval_ending2 = encoded_eval[:, self.n_story_sentences + 1]
 
         eval_ending1 = np.expand_dims(eval_ending1, axis=1)
         eval_ending2 = np.expand_dims(eval_ending2, axis=1)
@@ -212,24 +226,33 @@ class RNN(Model):
     def _train_batch(self, train_batch, add_summary=False, verbose=False):
         """Runs the training on every batch."""
         train_sentences, train_labels = train_batch
+
+        train_sentences_list = train_sentences.tolist()
+        encoded_train = list()
+
+        for story in train_sentences_list:
+            encoded_train.append(self.encoder.encode_sentences(story))
+
+        encoded_train = np.array(encoded_train)
+
         fetches = [self.loss,  self.train_op, self.train_predictions, self.train_accuracy]
         if add_summary:
             fetches.append(self.merged_train_summaries)
 
-        assert len(train_sentences.shape) == 3
-        assert list(train_sentences.shape[1:]) == self.input_ph.get_shape().as_list()[1:]
+        assert len(encoded_train.shape) == 3
+        assert list(encoded_train.shape[1:]) == self.input_ph.get_shape().as_list()[1:]
 
         if len(train_labels.shape) == 1:
             train_labels = train_labels.reshape(-1, 1)
 
-        feed_dict = {self.input_ph: train_sentences, self.labels_ph: train_labels}
+        feed_dict = {self.input_ph: encoded_train, self.labels_ph: train_labels}
         results = self._get_tf_object("Session").run(fetches=fetches, feed_dict=feed_dict)
 
         if add_summary:
             timestep = self._get_tf_object("Session").run(self._get_tf_object("GlobalStep"))
             self._get_tf_object("FileWriter").add_summary(results[-1], timestep)
         if verbose:
-            print("Loss: {0:.4f}, Train accuracy: {1:.3f}".format(results[0], results[3]))
+            logger.info("Loss: {0:.4f}, Train accuracy: {1:.3f}".format(results[0], results[3]))
 
     def _build_optimizer(self, optimizer=None):
         """Builds the optimizer."""

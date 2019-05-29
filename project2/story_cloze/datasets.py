@@ -24,7 +24,6 @@ class Dataset:
     test_file = "stories.test.csv"
 
     def __init__(self,
-                 encoder: SentenceEncoder,
                  input_dir: str = DATA_DIR,
                  story_length: int = 4,
                  preprocessors: List = None,
@@ -34,7 +33,6 @@ class Dataset:
                  use_small: bool = False) -> None:
 
         self.input_dir = input_dir
-        self.encoder = encoder
         self.story_length = story_length
         self.add_neg = add_neg
         self.use_small = use_small
@@ -44,8 +42,6 @@ class Dataset:
         self.read_train_and_eval()
         self._process_train()
         self._process_eval()
-        self._encode_train()
-        self._encode_eval()
 
     def read_train_and_eval(self) -> None:
         """Reads the train and eval stories."""
@@ -71,19 +67,19 @@ class Dataset:
         self.train_labels = np.ones((len(self.train_sentences), 1))
         self.n_train_stories = len(self.train_labels)
 
-        print("Train sentences Shape: ", self.train_sentences.shape)
-        print("Train labels shape: ", self.train_labels.shape)
+        logger.info("Train sentences Shape: ", self.train_sentences.shape)
+        logger.info("Train labels shape: ", self.train_labels.shape)
 
         del self.train_df
 
         if self.add_neg:
-            print("Adding negative endings.")
+            logger.info("Adding negative endings.")
             self._add_negative_endings(n_random=self.n_random, n_backward=self.n_backward)
 
     def _add_negative_endings(self, n_random: int =0, n_backward: int =0):
         """Adds specified number of backward and random negative endings for each story."""
         if n_random:
-            print("Sampling {} random endings per story.".format(n_random))
+            logger.info("Sampling {} random endings per story.".format(n_random))
             random_endings = self.sample_random_endings(n_samples=n_random).reshape(-1, 1)
             train_story_augment = np.array([self.train_stories]*n_random)
             train_story_augment = train_story_augment.reshape(-1, 4)
@@ -96,12 +92,12 @@ class Dataset:
             self.train_labels = np.vstack([self.train_labels, train_labels])
             assert len(self.train_sentences) == len(self.train_labels)
 
-            print("After adding random endings..")
-            print("Train sentences shape: ", self.train_sentences.shape)
-            print("Train labels shape: ", self.train_labels.shape)
+            logger.info("After adding random endings..")
+            logger.info("Train sentences shape: ", self.train_sentences.shape)
+            logger.info("Train labels shape: ", self.train_labels.shape)
 
         if n_backward:
-            print("Sampling {} backward endings per story.".format(n_backward))
+            logger.info("Sampling {} backward endings per story.".format(n_backward))
             backward_endings = self.sample_backward_endings(n_samples=n_backward)
             train_story_augment = np.array([self.train_stories]*n_backward)
             train_story_augment = train_story_augment.reshape(-1, 4)
@@ -114,9 +110,9 @@ class Dataset:
             self.train_labels = np.vstack([self.train_labels, train_labels])
             assert len(self.train_sentences) == len(self.train_labels)
 
-            print("After adding backward endings..")
-            print("Train sentences shape: ", self.train_sentences.shape)
-            print("Train labels shape: ", self.train_labels.shape)
+            logger.info("After adding backward endings..")
+            logger.info("Train sentences shape: ", self.train_sentences.shape)
+            logger.info("Train labels shape: ", self.train_labels.shape)
 
     def _process_eval(self):
         correct_ending_idxs = self.eval_df["AnswerRightEnding"] - 1
@@ -127,8 +123,8 @@ class Dataset:
         self.eval_sentences = self.eval_df[eval_cols].values
         self.eval_correct_endings = correct_ending_idxs.values
 
-        print("Eval sentences shape: ", self.eval_sentences.shape)
-        print("Eval endings shape: ", self.eval_correct_endings.shape)
+        logger.info("Eval sentences shape: ", self.eval_sentences.shape)
+        logger.info("Eval endings shape: ", self.eval_correct_endings.shape)
         del self.eval_df
 
         assert len(self.eval_sentences) == len(self.eval_correct_endings), "All sentences should have endings."
@@ -150,31 +146,6 @@ class Dataset:
         backward_endings = np.asarray(backward_endings)
         return backward_endings
 
-    def _encode_train(self):
-        """Encodes train sentences and endings."""
-        train_sentences_list = self.train_sentences.tolist()
-        encoded_train = list()
-
-        print("Encoding train sentences")
-        for story in train_sentences_list:
-            encoded_train.append(self.encoder.encode_sentences(story))
-
-        print("Encoded train Shape: ", np.array(encoded_train).shape)
-        self.train_embeddings = (np.array(encoded_train), np.array(self.train_labels))
-        self.embedding_dim = self.train_embeddings[0].shape[-1]
-
-    def _encode_eval(self):
-        """Encodes train sentences and endings."""
-        eval_sentences_list = self.eval_sentences.tolist()
-        encoded_eval = list()
-
-        print("Encoding eval sentences")
-        for story in eval_sentences_list:
-            encoded_eval.append(self.encoder.encode_sentences(story))
-
-        print("Encoded eval Shape: ", np.array(encoded_eval).shape)
-        self.eval_embeddings = (np.array(encoded_eval), self.eval_correct_endings)
-
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
         """Generates batches of data for training.
 
@@ -188,9 +159,9 @@ class Dataset:
             Whether to shuffle before generating batches
         """
         if mode == "train":
-            data = self.train_embeddings
+            data = (self.train_sentences, self.train_labels)
         elif mode == "eval":
-            data = self.eval_embeddings
+            data = (self.eval_sentences, self.eval_correct_endings)
         elif mode == "test":
             data = self.test
 
