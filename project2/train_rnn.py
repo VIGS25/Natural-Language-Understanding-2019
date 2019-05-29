@@ -69,7 +69,6 @@ def main():
     dataset = Dataset(encoder=encoder,
                       story_length=args.story_length,
                       input_dir=args.input_dir,
-                      use_small=True,
                       n_random=args.n_random,
                       n_backward=args.n_backward)
 

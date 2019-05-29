@@ -48,7 +48,7 @@ class SkipThoughts(SentenceEncoder):
     def get_uni_metadata(self) -> Tuple[str, str, str]:
         """Returns files corresponding to unidirectional sentence encoding."""
         config = [model_config()]
-        ckpt_file = [os.path.join(self.embed_dir, self.mode, "model.ckpt-9999")]
+        ckpt_file = [os.path.join(self.embed_dir, self.mode, "model.ckpt-501424")]
         embedding_file = [os.path.join(self.embed_dir, self.mode, "embeddings.npy")]
         return config, ckpt_file, embedding_file
 
