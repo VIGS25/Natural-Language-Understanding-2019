@@ -85,7 +85,7 @@ class Model(object):
             self.tf_objects["Saver"] = tf.train.Saver(max_to_keep=self.max_checkpoints_to_keep)
 
             if self.restore_from is not None:
-                logger.info("Restoring variable values from.")
+                logger.info("Restoring variable values from. {}".format(restore_from))
                 self._get_tf_object("Saver").restore(self._get_tf_object("Session"), self.restore_from)
             else:
                 logger.info("Initializing variable values.")
@@ -134,17 +134,18 @@ class Model(object):
 
         eval_accuracy = np.mean(labels == preds)
 
+        timestep = self._get_tf_object("Session").run(self._get_tf_object("GlobalStep"))
+
         if verbose:
-            logger.info("Epoch Num: {}, Eval Accuracy: {}".format(epoch, eval_accuracy))
+            logger.info("Epoch Num: {}, TimeStep: {}, Eval Accuracy: {}".format(epoch, timestep, eval_accuracy))
             logger.info("\n")
 
         fetches = self.merged_eval_summaries
         feed_dict = {self.eval_accuracy_ph: eval_accuracy, self.eval_act1_ph: probs1, self.eval_act2_ph: probs2}
         results = self._get_tf_object("Session").run(fetches=fetches, feed_dict=feed_dict)
-        timestep = self._get_tf_object("Session").run(self._get_tf_object("GlobalStep"))
         self._get_tf_object("FileWriter").add_summary(results, timestep)
 
-    def fit(self, dataset, batch_size=64, nb_epochs=10, log_every=100, print_every=100, display_eval=True):
+    def fit(self, dataset, batch_size=64, nb_epochs=10, log_every=100, print_every=100, eval_every=100):
         """Fits the model, and computes train-eval statistics."""
         start_time = time.time()
 
@@ -155,10 +156,12 @@ class Model(object):
 
             logger.info("Computing train statistics, Epoch {}".format(epoch+1))
             for n_batch, train_batch in enumerate(dataset.batch_generator(mode="train", batch_size=batch_size, shuffle=True)):
-                self._train_batch(train_batch=train_batch, add_summary=n_batch % log_every, verbose=n_batch % print_every)
+                self._train_batch(train_batch=train_batch, add_summary=n_batch % log_every == 0, verbose=n_batch % print_every == 0)
 
-            logger.info("Computing eval statistics...".format(epoch+1))
-            self.evaluate(dataset=dataset, epoch=epoch, verbose=display_eval)
+                if n_batch % eval_every == 0:
+                    logger.info("Computing eval statistics...".format(epoch+1))
+                    self.evaluate(dataset=dataset, epoch=epoch, verbose=True)
+
             model_savepath = os.path.join(model_dir_epoch, "model.ckpt")
             self.save(model_savepath)
 

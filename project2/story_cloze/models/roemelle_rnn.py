@@ -92,7 +92,7 @@ class RNN(Model):
         """Builds placeholders needed for training."""
         self.input_ph = tf.placeholder(dtype=tf.float32, name='Inputs',
                                       shape=[None, self.n_story_sentences + 1, self.embedding_dim])
-        logger.info("Input Story: ", self.input_ph.shape.as_list())
+        logger.info("Input Story: {}".format(self.input_ph.shape.as_list()))
         self.labels_ph = tf.placeholder(dtype=tf.float32, name='Labels', shape=[None, 1])
         self.batch_size = tf.shape(self.input_ph)[0]
 
@@ -107,8 +107,8 @@ class RNN(Model):
         self.eval_act1_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1], name='Eval_act1')
         self.eval_act2_ph = tf.placeholder(dtype=tf.float32, shape=[None, 1], name="Eval_act2")
 
-        logger.info("Eval input1: ", self.eval_in1.shape)
-        logger.info("Eval input2: ", self.eval_in2.shape)
+        logger.info("Eval input1: {}".format(self.eval_in1.shape))
+        logger.info("Eval input2: {}".format(self.eval_in2.shape))
 
     def _unroll_rnn_cell(self, state, mode="train"):
         """Unrolls the RNN cell."""
@@ -148,14 +148,14 @@ class RNN(Model):
     def _build_fc_layer(self, inputs, reuse=tf.AUTO_REUSE):
         with tf.variable_scope("FC", reuse=reuse):
             logits = tf.layers.dense(inputs, units=1, activation=None, name="output")
-            logger.info("FC output: ", logits.shape.as_list())
+            logger.info("FC output: {}".format(logits.shape.as_list()))
 
         return logits
 
     def _compute_loss(self, mode="train"):
         if mode == "train":
             rnn_final_state = self.train_states[-1]
-            logger.info("Final RNN hidden state: ", rnn_final_state.shape.as_list())
+            logger.info("Final RNN hidden state: {}".format(rnn_final_state.shape.as_list()))
             assert rnn_final_state.shape.as_list()[-1] == self.num_hidden_units
 
             self.train_logits = self._build_fc_layer(inputs=rnn_final_state, reuse=tf.AUTO_REUSE)
@@ -171,9 +171,9 @@ class RNN(Model):
             rnn_final_state1 = self.eval1_states[-1]
             rnn_final_state2 = self.eval2_states[-1]
 
-            logger.info("Final RNN hidden state1: ", rnn_final_state1.shape.as_list())
+            logger.info("Final RNN hidden state1: {}".format(rnn_final_state1.shape.as_list()))
             assert rnn_final_state1.shape.as_list()[-1] == self.num_hidden_units
-            logger.info("Final RNN hidden state2: ", rnn_final_state2.shape.as_list())
+            logger.info("Final RNN hidden state2: {}".format(rnn_final_state2.shape.as_list()))
             assert rnn_final_state2.shape.as_list()[-1] == self.num_hidden_units
 
             self.eval_logits1 = self._build_fc_layer(inputs=rnn_final_state1, reuse=True)

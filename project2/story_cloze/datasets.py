@@ -93,8 +93,8 @@ class Dataset:
             assert len(self.train_sentences) == len(self.train_labels)
 
             logger.info("After adding random endings..")
-            logger.info("Train sentences shape: ", self.train_sentences.shape)
-            logger.info("Train labels shape: ", self.train_labels.shape)
+            logger.info("Train sentences shape: {}".format(self.train_sentences.shape))
+            logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
         if n_backward:
             logger.info("Sampling {} backward endings per story.".format(n_backward))
@@ -111,8 +111,8 @@ class Dataset:
             assert len(self.train_sentences) == len(self.train_labels)
 
             logger.info("After adding backward endings..")
-            print("Train sentences shape: ", self.train_sentences.shape)
-            print("Train labels shape: ", self.train_labels.shape)
+            logger.info("Train sentences shape: {}".format(self.train_sentences.shape))
+            logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
     def _process_eval(self):
         correct_ending_idxs = self.eval_df["AnswerRightEnding"] - 1
@@ -123,8 +123,8 @@ class Dataset:
         self.eval_sentences = self.eval_df[eval_cols].values
         self.eval_correct_endings = correct_ending_idxs.values
 
-        logger.info("Eval sentences shape: ", self.eval_sentences.shape)
-        logger.info("Eval endings shape: ", self.eval_correct_endings.shape)
+        logger.info("Eval sentences shape: {}".format(self.eval_sentences.shape))
+        logger.info("Eval endings shape: {}".format(self.eval_correct_endings.shape))
         del self.eval_df
 
         assert len(self.eval_sentences) == len(self.eval_correct_endings), "All sentences should have endings."
@@ -147,7 +147,6 @@ class Dataset:
             backward_endings.append(self.train_stories[story_num, idx])
 
         backward_endings = np.asarray(backward_endings)
-        print(backward_endings.shape)
         return backward_endings
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):

@@ -45,6 +45,7 @@ def main():
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of epochs for training.")
     parser.add_argument("--log_every", type=int, default=100, help="Log stats every.")
     parser.add_argument("--print_every", type=int, default=100, help="Print stats every.")
+    parser.add_argument("--eval_every", type=int, default=100, help="Eval every.")
 
     args = parser.parse_args()
 
@@ -94,7 +95,10 @@ def main():
                 restore_from=args.restore_from)
 
     logger.info("Training the model...")
-    model.fit(dataset, nb_epochs=args.num_epochs, display_eval=True)
+    model.fit(dataset, nb_epochs=args.num_epochs,
+              log_every=args.log_every,
+              print_every=args.print_every,
+              eval_every=args.eval_every)
 
 if __name__ == "__main__":
     main()
