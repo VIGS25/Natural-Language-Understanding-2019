@@ -12,7 +12,8 @@ from story_cloze import Dataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import RNN
 
-DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
+# DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
+DEFAULT_INPUT_DIR = None
 DEFAULT_LOG_DIR = "./logs"
 DEFAULT_MODEL_DIR = "./checkpoints"
 
@@ -38,7 +39,6 @@ def main():
     # Dataset specific
     parser.add_argument("--story_length", type=int, default=4, help="Size of story used.")
     parser.add_argument("--n_random", type=int, default=1, help="Number of random endings generated")
-    parser.add_argument("--n_backward", type=int, default=1, help="Number of backward_endings.")
 
     # Training specific
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate used.")
@@ -78,8 +78,7 @@ def main():
     logger.info("Parameters used: ")
     dataset = Dataset(story_length=args.story_length,
                       input_dir=args.input_dir,
-                      n_random=args.n_random,
-                      n_backward=args.n_backward)
+                      n_random=args.n_random)
 
     logger.info("Building the model...")
     model = RNN(encoder=encoder,

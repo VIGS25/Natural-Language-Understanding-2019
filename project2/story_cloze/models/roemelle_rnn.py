@@ -193,16 +193,12 @@ class RNN(Model):
 
             variables = tf.trainable_variables()
 
+    def _encode(self, sentences):
+        return self.encoder.encode(sentences)
+
     def _evaluate_batch(self, eval_sentences):
         """Computes metrics on eval batches."""
-
-        eval_sentences_list = eval_sentences.tolist()
-        encoded_eval = list()
-
-        for story in eval_sentences_list:
-            encoded_eval.append(self.encoder.encode_sentences(story))
-
-        encoded_eval = np.array(encoded_eval)
+        encoded_eval = np.array(list(map(lambda x: self._encode(x), [eval_sentences])))
 
         eval_story = encoded_eval[:, :self.n_story_sentences]
         eval_ending1 = encoded_eval[:, self.n_story_sentences]
@@ -226,14 +222,7 @@ class RNN(Model):
     def _train_batch(self, train_batch, add_summary=False, verbose=False):
         """Runs the training on every batch."""
         train_sentences, train_labels = train_batch
-
-        train_sentences_list = train_sentences.tolist()
-        encoded_train = list()
-
-        for story in train_sentences_list:
-            encoded_train.append(self.encoder.encode_sentences(story))
-
-        encoded_train = np.array(encoded_train)
+        encoded_train = np.array(list(map(lambda x: self._encode(x), train_sentences)))
 
         fetches = [self.loss,  self.train_op, self.train_predictions, self.train_accuracy]
         if add_summary:

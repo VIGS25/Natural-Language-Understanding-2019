@@ -16,14 +16,8 @@ class SentenceEncoder:
     def encode_sentence(self, sentence: str):
         raise NotImplementedError("SubClasses must implement for themselves.")
 
-    def encode_sentences(self, sentences: List[str]) -> np.ndarray:
-        encoded_sentences = list()
-        for sentence in sentences:
-            if not isinstance(sentence, list):
-                sentence = [sentence]
-            encoded_sentence = np.squeeze(self.encode_sentence(sentence))
-            encoded_sentences.append(encoded_sentence)
-        return np.asarray(encoded_sentences)
+    def encode(self, sentences: List[str]) -> np.ndarray:
+        return self.encoder.encode(sentences)
 
 class SkipThoughts(SentenceEncoder):
     """Implementation of SkipThoughts sentence encoder."""
@@ -76,10 +70,6 @@ class SkipThoughts(SentenceEncoder):
 
         for idx, configuration in enumerate(config):
             self.encoder.load_model(configuration, self.vocab_file, embedding_file[idx], ckpt_file[idx])
-
-    def encode_sentence(self, sentence: str) -> np.ndarray:
-        """Returns encoding of the sentence."""
-        return self.encoder.encode(sentence)
 
 class UniversalEncoder(SentenceEncoder):
     import tensorflow_hub as hub
