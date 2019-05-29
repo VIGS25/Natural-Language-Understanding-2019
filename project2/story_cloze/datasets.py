@@ -48,6 +48,8 @@ class Dataset:
 
         self._process_train(train_file)
         self._process_eval()
+        self._encode_train()
+        self._encode_eval()
 
     def _process_train(self, train_file):
         """Processes training set and augments it with negative endings."""
