@@ -111,8 +111,8 @@ class Dataset:
             assert len(self.train_sentences) == len(self.train_labels)
 
             logger.info("After adding backward endings..")
-            logger.info("Train sentences shape: ", self.train_sentences.shape)
-            logger.info("Train labels shape: ", self.train_labels.shape)
+            print("Train sentences shape: ", self.train_sentences.shape)
+            print("Train labels shape: ", self.train_labels.shape)
 
     def _process_eval(self):
         correct_ending_idxs = self.eval_df["AnswerRightEnding"] - 1
@@ -130,20 +130,24 @@ class Dataset:
         assert len(self.eval_sentences) == len(self.eval_correct_endings), "All sentences should have endings."
 
     def sample_random_endings(self, n_samples=1):
-        ending_idxs = [np.random.choice(self.n_train_stories, size=n_samples, replace=False)
-                       for _ in range(self.n_train_stories)]
+        ending_idxs = list()
+        for _ in range(n_samples):
+            ending_idxs.append(np.random.permutation(self.n_train_stories))
         ending_idxs = np.asarray(ending_idxs)
         return self.train_endings[ending_idxs]
 
     def sample_backward_endings(self, n_samples=1):
-        ending_idxs = [np.random.choice(self.story_length, size=n_samples)
-                       for _ in range(self.n_train_stories)]
+        ending_idxs = list()
+        for _ in range(n_samples):
+            ending_idxs.append(np.random.choice(self.story_length, size=self.n_train_stories))
         ending_idxs = np.asarray(ending_idxs)
+
         backward_endings = list()
         for story_num, idx in enumerate(ending_idxs):
             backward_endings.append(self.train_stories[story_num, idx])
 
         backward_endings = np.asarray(backward_endings)
+        print(backward_endings.shape)
         return backward_endings
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
@@ -151,7 +155,8 @@ class Dataset:
 
         Parameters
         ----------
-        mode: str, default train
+        mode: str, default trainlogging.basicConfig(level=logging.DEBUG)
+    logger = logging.getLogger(__name__)
             Whether we want to generate batches for train, eval or test dataset
         batch_size: int, default 64
             Batch size used
