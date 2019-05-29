@@ -11,7 +11,7 @@ from story_cloze import Dataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import RNN
 
-DEFAULT_INPUT_DIR = "./data"
+DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
 DEFAULT_LOG_DIR = "./logs"
 DEFAULT_MODEL_DIR = "./checkpoints"
 
@@ -23,7 +23,7 @@ def main():
     parser.add_argument("--log_dir", default=DEFAULT_LOG_DIR, help="Where to save Tensorboard-Logs to")
     parser.add_argument("--model_dir", default=DEFAULT_MODEL_DIR, help="Where to save models to.")
     parser.add_argument("--restore_from", default=None, help="Where to restore pretrained model from.")
-    parser.add_argument("--max_checkpoints_to_keep", default=5, help="How many checkpoints to keep.")
+    parser.add_argument("--max_checkpoints_to_keep", default=5, type=int, help="How many checkpoints to keep.")
 
     # Setup specific
     parser.add_argument("--batch_size", default=64, type=int, help="Batch Size used.")
