@@ -12,8 +12,8 @@ from story_cloze import Dataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import RNN
 
-# DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
-DEFAULT_INPUT_DIR = None
+DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
+# DEFAULT_INPUT_DIR = None
 DEFAULT_LOG_DIR = "./logs"
 DEFAULT_MODEL_DIR = "./checkpoints"
 
@@ -76,7 +76,8 @@ def main():
 
     logger.info("Starting to run the experiment {}".format(exp_name))
     logger.info("Parameters used: ")
-    dataset = Dataset(story_length=args.story_length,
+    dataset = Dataset(encoder=encoder,
+                      story_length=args.story_length,
                       input_dir=args.input_dir,
                       n_random=args.n_random)
 

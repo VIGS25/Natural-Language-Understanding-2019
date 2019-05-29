@@ -196,10 +196,8 @@ class RNN(Model):
     def _encode(self, sentences):
         return self.encoder.encode(sentences)
 
-    def _evaluate_batch(self, eval_sentences):
+    def _evaluate_batch(self, encoded_eval):
         """Computes metrics on eval batches."""
-        encoded_eval = np.array(list(map(lambda x: self._encode(x), [eval_sentences])))
-
         eval_story = encoded_eval[:, :self.n_story_sentences]
         eval_ending1 = encoded_eval[:, self.n_story_sentences]
         eval_ending2 = encoded_eval[:, self.n_story_sentences + 1]
@@ -221,8 +219,7 @@ class RNN(Model):
 
     def _train_batch(self, train_batch, add_summary=False, verbose=False):
         """Runs the training on every batch."""
-        train_sentences, train_labels = train_batch
-        encoded_train = np.array(list(map(lambda x: self._encode(x), train_sentences)))
+        encoded_train, train_labels = train_batch
 
         fetches = [self.loss,  self.train_op, self.train_predictions, self.train_accuracy]
         if add_summary:

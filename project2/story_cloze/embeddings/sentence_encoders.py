@@ -13,9 +13,6 @@ from .skip_thoughts.configuration import model_config
 class SentenceEncoder:
     """Abstract implementation of sentence encoder."""
 
-    def encode_sentence(self, sentence: str):
-        raise NotImplementedError("SubClasses must implement for themselves.")
-
     def encode(self, sentences: List[str]) -> np.ndarray:
         return self.encoder.encode(sentences)
 

@@ -24,6 +24,7 @@ class Dataset:
     test_file = "stories.test.csv"
 
     def __init__(self,
+                 encoder,
                  input_dir: str = DATA_DIR,
                  story_length: int = 4,
                  preprocessors: List = None,
@@ -33,6 +34,7 @@ class Dataset:
                  use_small: bool = False) -> None:
 
         self.input_dir = input_dir
+        self.encoder = encoder
         self.story_length = story_length
         self.add_neg = add_neg
         self.use_small = use_small
@@ -99,7 +101,7 @@ class Dataset:
         eval_cols = ["sentence_{}".format(i) for i in range(1, 5)] + ["ending1", "ending2"]
         self.eval_df.columns = eval_cols
 
-        self.eval_data = self.eval_df[eval_cols].values
+        self.eval_data = self.eval_df.apply(lambda x: list([x[col] for col in eval_cols]),axis=1)
         self.eval_correct_endings = correct_ending_idxs.values
 
         logger.info("Eval sentences shape: {}".format(self.eval_data.shape))
@@ -114,6 +116,12 @@ class Dataset:
             ending_idxs.append(np.random.permutation(self.n_train_stories))
         ending_idxs = np.asarray(ending_idxs)
         return self.train_sentences[ending_idxs, -1]
+
+    def _encode_train(self):
+        self.train_data = np.array(list(map(lambda x: self.encoder.encode(x), self.train_data)))
+
+    def _encode_eval(self):
+        self.eval_data = np.array(list(map(lambda x: self.encoder.encode(x), self.eval_data)))
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
         """Generates batches of data for training.
