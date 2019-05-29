@@ -62,8 +62,8 @@ class Dataset:
         self.train_labels = np.ones((len(self.train_sentences), 1))
         self.n_train_stories = len(self.train_labels)
 
-        print("Train sentences Shape: ", self.train_sentences.shape)
-        print("Train labels shape: ", self.train_labels.shape)
+        logger.info("Train sentences Shape: ", self.train_sentences.shape)
+        logger.info("Train labels shape: ", self.train_labels.shape)
 
         if self.add_neg:
             logger.info("Adding negative endings.")
@@ -88,9 +88,9 @@ class Dataset:
             self.train_labels = np.vstack([self.train_labels, train_labels])
             assert len(self.train_sentences) == len(self.train_labels)
 
-            print("After adding random endings..")
-            print("Train sentences shape: {}".format(self.train_sentences.shape))
-            print("Train labels shape: {}".format(self.train_labels.shape))
+            logger.info("After adding random endings..")
+            logger.info("Train sentences shape: {}".format(self.train_sentences.shape))
+            logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
         train_sent_df = pd.DataFrame(self.train_sentences, columns=self.train_cols)
         self.train_df = train_sent_df
@@ -120,18 +120,19 @@ class Dataset:
         return self.train_sentences[ending_idxs, -1]
 
     def _encode_train(self):
-        self.train_data = np.array(list(map(lambda x: self.encoder.encode(x), self.train_data)))
+        logger.info("Encoding train sentences...")
+        self.train_data = np.array([self.encoder.encode(x) for x in self.train_data])
 
     def _encode_eval(self):
-        self.eval_data = np.array(list(map(lambda x: self.encoder.encode(x), self.eval_data)))
+        logger.info("Encoding eval sentences...")
+        self.eval_data = np.array([self.encoder.encode(x) for x in self.eval_data])
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
         """Generates batches of data for training.
 
         Parameters
         ----------
-        mode: str, default trainlogging.basicConfig(level=logging.DEBUG)
-    logger = logging.getLogger(__name__)
+        mode: str, default train
             Whether we want to generate batches for train, eval or test dataset
         batch_size: int, default 64
             Batch size used
