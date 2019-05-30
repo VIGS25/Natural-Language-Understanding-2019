@@ -92,8 +92,8 @@ def main():
                 max_checkpoints_to_keep=args.max_checkpoints_to_keep,
                 trainable_zero_state=args.trainable_zero_state,
                 restore_from=args.restore_from)
-
-   logger.info("Training the model...")
+    
+    logger.info("Training the model...")
     model.fit(dataset,
               batch_size=args.batch_size,
               nb_epochs=args.num_epochs,
