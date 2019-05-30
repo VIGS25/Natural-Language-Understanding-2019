@@ -25,15 +25,14 @@ class Dataset:
     test_file = "stories.test.csv"
 
     def __init__(self,
-                 encoder,
+                 encoder: SentenceEncoder,
                  input_dir: str = DATA_DIR,
                  story_length: int = 4,
                  preprocessors: List = None,
                  add_neg: bool = True,
                  n_random: int = 4,
                  n_backward: int = 2,
-                 use_small: bool = False,
-                 load = False) -> None:
+                 use_small: bool = False): -> None
 
         self.input_dir = input_dir
         self.encoder = encoder
@@ -50,15 +49,9 @@ class Dataset:
             train_file = self.train_file
             eval_file = self.eval_file
 
-        if not load:
-            self._process_train(train_file)
-            self._process_eval(eval_file)
-            self._encode_train()
-            self._encode_eval()
-        else:
-            self.load()
-            self._process_eval(eval_file)
-            self._encode_eval()
+        self.load(train_file)
+        self._process_eval(eval_file)
+        self._encode_eval()
 
     def _process_train(self, train_file):
         """Processes training set and augments it with negative endings."""
@@ -81,7 +74,7 @@ class Dataset:
         self.train_data = self.train_df.apply(lambda x: list([x[col] for col in self.train_cols]),axis=1)
         del self.train_df
 
-    def _add_negative_endings(self, n_random: int =0, n_backward: int =0):
+    def _add_negative_endings(self, n_random: int = 0, n_backward: int = 0):
         """Adds specified number of backward and random negative endings for each story."""
         if n_random:
             logger.info("Sampling {} random endings per story.".format(n_random))
@@ -105,7 +98,7 @@ class Dataset:
         self.train_df = train_sent_df
         del self.train_sentences
 
-    def _process_eval(self, eval_file):
+    def _process_eval(self, eval_file: str):
         self.eval_df = pd.read_csv(os.path.join(self.input_dir, eval_file))
         correct_ending_idxs = self.eval_df["AnswerRightEnding"] - 1
         self.eval_df.drop(["InputStoryid", "AnswerRightEnding"], axis=1, inplace=True)
@@ -121,7 +114,7 @@ class Dataset:
 
         assert len(self.eval_data) == len(self.eval_correct_endings), "All sentences should have endings."
 
-    def sample_random_endings(self, n_samples=1):
+    def sample_random_endings(self, n_samples: int = 1):
         ending_idxs = list()
         for _ in range(n_samples):
             ending_idxs.append(np.random.permutation(self.n_train_stories))
@@ -130,30 +123,42 @@ class Dataset:
 
     def _encode_train(self):
         logger.info("Encoding train sentences...")
-        self.train_data = np.array([self.encoder.encode(x) for x in self.train_data])
-        filename = os.path.join(self.input_dir, "train_embeddings.npy")
-        logger.info("Embeddings shape: {}".format(self.train_data.shape))
-        np.save(filename, self.train_data, allow_pickle=False)
-        np.save(os.path.join(self.input_dir, "train_labels.npy"), self.train_labels, allow_pickle=False)
+        self.train_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.train_data])
+        encoder_name = self.encoder.__class__.__name__
+
+        embed_name = os.path.join(self.input_dir, "train_embeddings_" + encoder_name + "_" + self.encoder.mode  + ".npy")
+        np.save(embed_name, self.train_data, allow_pickle=False)
+
+        label_name = os.path.join(self.input_dir, "train_labels_" + encoder_name + "_" + self.encoder.mode  + ".npy")
+        np.save(label_name, self.train_labels, allow_pickle=False)
         logger.info("Saved training embeddings.")
 
     def _encode_eval(self):
         logger.info("Encoding eval sentences...")
-        self.eval_data = np.array([self.encoder.encode(x) for x in self.eval_data])
+        self.eval_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.eval_data])
         filename = os.path.join(self.input_dir, "eval_embeddings.npy")
         logger.info("Embeddings shape: {}".format(self.eval_data.shape))
-        np.save(filename, self.eval_data, allow_pickle=False)
-        logger.info("Saved eval embeddings.")
 
-    def load(self):
-        logger.info("Loading the datasets...")
-        filename = os.path.join(self.input_dir, "train_embeddings.npy")
-        self.train_data = np.load(filename).astype(np.float32)
-        self.n_stories = self.train_data.shape[0]
+    def load(self, train_file: str):
+        logger.info("Loading the embeddings and labels...")
+        encoder_name = self.encoder.__class__.__name__
+        embed_name = os.path.join(self.input_dir, "train_embeddings_" + encoder_name + "_" + self.encoder.mode  + ".npy")
+
+        if not os.path.exists(embed_name):
+            logger.warning("{} does not exist. Encoding embeddings.".format(embed_name))
+            self._process_train(train_file)
+            self._encode_train()
+
+        else:
+            self.train_data = np.load(embed_name).astype(np.float32)
+            self.n_stories = self.train_data.shape[0]
+            label_name = os.path.join(self.input_dir, "train_labels_" + encoder_name + "_" + self.encoder.mode  + ".npy")
+            self.train_labels = np.load(label_name).astype(np.float32)
+
         logger.info("Train dataset shape: {}".format(self.train_data.shape))
-        self.train_labels = np.array([1]*88161 + [0]*(self.n_stories - 88161))
+        logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
-    def batch_generator(self, mode="train", batch_size=64, shuffle=True):
+    def batch_generator(self, mode: str = "train", batch_size: int = 64, shuffle:bool =True):
         """Generates batches of data for training.
 
         Parameters

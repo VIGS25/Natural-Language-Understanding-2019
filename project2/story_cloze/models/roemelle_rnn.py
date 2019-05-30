@@ -112,7 +112,6 @@ class RNN(Model):
 
     def _unroll_rnn_cell(self, state, mode="train"):
         """Unrolls the RNN cell."""
-
         if mode == "train":
             for time_step in range(self.n_story_sentences + 1):
                 out, state = self.rnn_cell(self.input_ph[:, time_step, :], state)
@@ -157,12 +156,9 @@ class RNN(Model):
         if mode == "train":
             rnn_final_state = self.train_states[-1]
             if self.rnn_type == "lstm":
-                rnn_final_state = tf.concat(rnn_final_state, axis=-1)
-                logger.info("Final RNN hidden state: {}".format(rnn_final_state.shape.as_list()))
-                assert rnn_final_state.shape.as_list()[-1] == 2 * self.num_hidden_units
-            else:
-                logger.info("Final RNN hidden state: {}".format(rnn_final_state.shape.as_list()))
-                assert rnn_final_state.shape.as_list()[-1] == self.num_hidden_units
+                rnn_final_state = rnn_final_state[0]
+            logger.info("Final RNN hidden state: {}".format(rnn_final_state.shape.as_list()))
+            assert rnn_final_state.shape.as_list()[-1] == self.num_hidden_units
 
             self.train_logits = self._build_fc_layer(inputs=rnn_final_state, reuse=tf.AUTO_REUSE)
             self.train_probs = tf.sigmoid(self.train_logits)
@@ -178,19 +174,13 @@ class RNN(Model):
             rnn_final_state2 = self.eval2_states[-1]
 
             if self.rnn_type == "lstm":
-                rnn_final_state1 = tf.concat(rnn_final_state1, axis=-1)
-                rnn_final_state2 = tf.concat(rnn_final_state2, axis=-1)
-
-                logger.info("Final RNN hidden state1: {}".format(rnn_final_state1.shape.as_list()))
-                assert rnn_final_state1.shape.as_list()[-1] == 2 * self.num_hidden_units
-                logger.info("Final RNN hidden state2: {}".format(rnn_final_state2.shape.as_list()))
-                assert rnn_final_state2.shape.as_list()[-1] == 2 * self.num_hidden_units
-
-            else:
-                logger.info("Final RNN hidden state1: {}".format(rnn_final_state1.shape.as_list()))
-                assert rnn_final_state1.shape.as_list()[-1] == self.num_hidden_units
-                logger.info("Final RNN hidden state2: {}".format(rnn_final_state2.shape.as_list()))
-                assert rnn_final_state2.shape.as_list()[-1] == self.num_hidden_units
+                rnn_final_state1 = rnn_final_state1[0]
+                rnn_final_state2 = rnn_final_state2[0]
+            
+            logger.info("Final RNN hidden state1: {}".format(rnn_final_state1.shape.as_list()))
+            assert rnn_final_state1.shape.as_list()[-1] == self.num_hidden_units
+            logger.info("Final RNN hidden state2: {}".format(rnn_final_state2.shape.as_list()))
+            assert rnn_final_state2.shape.as_list()[-1] == self.num_hidden_units
 
             self.eval_logits1 = self._build_fc_layer(inputs=rnn_final_state1, reuse=True)
             self.eval_logits2 = self._build_fc_layer(inputs=rnn_final_state2, reuse=True)
