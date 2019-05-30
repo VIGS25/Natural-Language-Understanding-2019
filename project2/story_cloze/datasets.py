@@ -150,6 +150,7 @@ class Dataset:
         filename = os.path.join(self.input_dir, "train_embeddings.npy")
         self.train_data = np.load(filename).astype(np.float32)
         self.n_stories = self.train_data.shape[0]
+        logger.info("Train dataset shape: {}".format(self.train_data.shape))
         self.train_labels = np.array([1]*88161 + [0]*(self.n_stories - 88161))
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
