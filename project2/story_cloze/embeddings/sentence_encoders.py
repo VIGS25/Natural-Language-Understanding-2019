@@ -69,19 +69,25 @@ class SkipThoughts(SentenceEncoder):
             self.encoder.load_model(configuration, self.vocab_file, embedding_file[idx], ckpt_file[idx])
 
 class UniversalEncoder(SentenceEncoder):
-    import tensorflow_hub as hub
-    encoder = None
-    built = False
+    """Pre-built implementation of Universal Sentence Encoder"""
+    def __init__(self, hub_id = "/2"):
+        import tensorflow_hub as hub
+        base_url = "https://tfhub.dev/google/universal-sentence-encoder%s"
+        assert hub_id in ["/2", "-large/3"]
+        self.encoder = hub.Module(base_url % hub_id)
 
     def encode_sentence(self, sentence: str) -> np.ndarray:
         """Returns encoding of the sentence."""
-        if not self.built:
-            self.encoder = hub.Module("https://tfhub.dev/google/universal-sentence-encoder/1")
-            self.built = True
         return self.encoder(sentence)
 
 if __name__ == "__main__":
-    encoder = SkipThoughts()
     sentences = ["The dog is a cat", "The dog is a cat"]
+    print("[+] Testing SkipThoughts.")
+    encoder = SkipThoughts()
     encoded = encoder.encode_sentences(sentences)
+    print(encoded.shape)
+    
+    print("[+] Testing UniversalEncoder.")
+    encoder = UniversalEncoder()
+    ecoded = encoder.encode(sentences)
     print(encoded.shape)
