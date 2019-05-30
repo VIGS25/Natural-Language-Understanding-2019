@@ -64,7 +64,7 @@ def main():
     else:
         raise ValueError("Encoder of type {} is not supported.".format(args.encoder_type))
 
-    exp_name = "Roemelle_RNN_" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
+    exp_name = "SidSri_FFN" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
     model_dir = os.path.join(args.model_dir, exp_name)
     log_dir = os.path.join(args.log_dir, exp_name)
 
