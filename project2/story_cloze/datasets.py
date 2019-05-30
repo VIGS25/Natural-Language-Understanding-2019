@@ -33,8 +33,7 @@ class Dataset:
                  n_random: int = 4,
                  n_backward: int = 2,
                  use_small: bool = False,
-                 load = False,
-                 ) -> None:
+                 load = False) -> None:
 
         self.input_dir = input_dir
         self.encoder = encoder
@@ -46,17 +45,19 @@ class Dataset:
 
         if use_small:
             train_file = self.train_small_file
+            eval_file = self.eval_small_file
         else:
             train_file = self.train_file
+            eval_file = self.eval_file
 
         if not load:
             self._process_train(train_file)
-            self._process_eval()
+            self._process_eval(eval_file)
             self._encode_train()
             self._encode_eval()
         else:
             self.load()
-            self._process_eval()
+            self._process_eval(eval_file)
             self._encode_eval()
 
     def _process_train(self, train_file):
@@ -104,8 +105,8 @@ class Dataset:
         self.train_df = train_sent_df
         del self.train_sentences
 
-    def _process_eval(self):
-        self.eval_df = pd.read_csv(os.path.join(self.input_dir, self.eval_file))
+    def _process_eval(self, eval_file):
+        self.eval_df = pd.read_csv(os.path.join(self.input_dir, eval_file))
         correct_ending_idxs = self.eval_df["AnswerRightEnding"] - 1
         self.eval_df.drop(["InputStoryid", "AnswerRightEnding"], axis=1, inplace=True)
         eval_cols = ["sentence_{}".format(i) for i in range(1, 5)] + ["ending1", "ending2"]
@@ -133,7 +134,7 @@ class Dataset:
         filename = os.path.join(self.input_dir, "train_embeddings.npy")
         logger.info("Embeddings shape: {}".format(self.train_data.shape))
         np.save(filename, self.train_data, allow_pickle=False)
-        np.save(os.path.join(self.input_dir, self.train_labels, allow_pickle))
+        np.save(os.path.join(self.input_dir, "train_labels.npy"), self.train_labels, allow_pickle=False)
         logger.info("Saved training embeddings.")
 
     def _encode_eval(self):
