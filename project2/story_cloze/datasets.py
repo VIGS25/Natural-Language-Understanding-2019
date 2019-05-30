@@ -56,6 +56,8 @@ class Dataset:
             self._encode_eval()
         else:
             self.load()
+            self._process_eval()
+            self._encode_eval()
 
     def _process_train(self, train_file):
         """Processes training set and augments it with negative endings."""
@@ -131,6 +133,7 @@ class Dataset:
         filename = os.path.join(self.input_dir, "train_embeddings.npy")
         logger.info("Embeddings shape: {}".format(self.train_data.shape))
         np.save(filename, self.train_data, allow_pickle=False)
+        np.save(os.path.join(self.input_dir, self.train_labels, allow_pickle))
         logger.info("Saved training embeddings.")
 
     def _encode_eval(self):
@@ -146,9 +149,8 @@ class Dataset:
 
         filename = os.path.join(self.input_dir, "train_embeddings.npy")
         self.train_data = np.load(filename).astype(np.float32)
-
-        filename = os.path.join(self.input_dir, "eval_embeddings.npy")
-        self.eval_data = np.load(filename).astype(np.float32)
+        self.n_stories = self.train_data.shape[0]
+        self.train_labels = np.array([1]*88161 + [0]*(self.n_stories - 88161))
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
         """Generates batches of data for training.
