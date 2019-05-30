@@ -82,8 +82,7 @@ def main():
                       n_random=args.n_random)
 
     logger.info("Building the model...")
-    model = RNN(encoder=encoder,
-                embedding_dim=embedding_dim,
+    model = RNN(embedding_dim=embedding_dim,
                 rnn_type=args.rnn_type,
                 learning_rate=args.learning_rate,
                 num_hidden_units=args.num_hidden_units,

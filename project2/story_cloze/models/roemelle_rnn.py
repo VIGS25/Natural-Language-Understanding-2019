@@ -40,7 +40,6 @@ class RNN(Model):
     eval2_outputs = list()
 
     def __init__(self,
-                 encoder,
                  embedding_dim: int,
                  n_story_sentences: int = 4,
                  learning_rate: float = 0.001,
@@ -73,7 +72,6 @@ class RNN(Model):
         restore_from: str, default None
             Restore saved model from
         """
-        self.encoder = encoder
         self.embedding_dim = embedding_dim
         self.n_story_sentences = n_story_sentences
         self.rnn_type = rnn_type
@@ -197,9 +195,6 @@ class RNN(Model):
             self.train_op = self.optimizer.apply_gradients(clipped_gradients, global_step=self._get_tf_object("GlobalStep"))
 
             variables = tf.trainable_variables()
-
-    def _encode(self, sentences):
-        return self.encoder.encode(sentences)
 
     def _evaluate_batch(self, encoded_eval):
         """Computes metrics on eval batches."""
