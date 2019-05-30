@@ -9,8 +9,6 @@ from typing import List, Dict, Tuple
 import logging
 import pickle
 
-from .embeddings.sentence_encoders import SentenceEncoder
-
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 

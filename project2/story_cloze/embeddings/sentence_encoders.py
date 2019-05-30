@@ -76,12 +76,14 @@ class UniversalEncoder(SentenceEncoder):
         assert hub_id in ["/2", "-large/3"]
         self.encoder = hub.Module(base_url % hub_id)
 
-    def encode_sentence(self, sentence: str) -> np.ndarray:
-        """Returns encoding of the sentence."""
+    def encode(self, sentence: List[str]) -> np.ndarray:
+        """Returns encoding of a list of sentences."""
         return self.encoder(sentence)
 
 if __name__ == "__main__":
     sentences = ["The dog is a cat", "The dog is a cat"]
+    tf.logging.set_verbosity(tf.logging.ERROR)
+
     print("[+] Testing SkipThoughts.")
     encoder = SkipThoughts()
     encoded = encoder.encode_sentences(sentences)
@@ -89,5 +91,7 @@ if __name__ == "__main__":
     
     print("[+] Testing UniversalEncoder.")
     encoder = UniversalEncoder()
-    ecoded = encoder.encode(sentences)
-    print(encoded.shape)
+    with tf.Session() as session:
+        session.run([tf.global_variables_initializer(), tf.tables_initializer()])
+        encoded = session.run(encoder.encode(sentences))
+        print(encoded.shape)
