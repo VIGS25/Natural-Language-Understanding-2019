@@ -135,7 +135,6 @@ class RNN(Model):
             self.rnn_cell = get_rnn_cell(rnn_type=self.rnn_type)
             if not self.trainable_zero_state:
                 state = self.rnn_cell.zero_state(batch_size=self.batch_size, dtype=tf.float32)
-                print(state)
             else:
                 raise NotImplementedError("Trainable zero state not supported yet.")
             if mode == "train":
@@ -176,7 +175,7 @@ class RNN(Model):
             if self.rnn_type == "lstm":
                 rnn_final_state1 = rnn_final_state1[0]
                 rnn_final_state2 = rnn_final_state2[0]
-            
+
             logger.info("Final RNN hidden state1: {}".format(rnn_final_state1.shape.as_list()))
             assert rnn_final_state1.shape.as_list()[-1] == self.num_hidden_units
             logger.info("Final RNN hidden state2: {}".format(rnn_final_state2.shape.as_list()))
