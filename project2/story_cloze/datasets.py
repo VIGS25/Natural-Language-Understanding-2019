@@ -23,14 +23,14 @@ class Dataset:
     test_file = "stories.test.csv"
 
     def __init__(self,
-                 encoder: SentenceEncoder,
+                 encoder,
                  input_dir: str = DATA_DIR,
                  story_length: int = 4,
                  preprocessors: List = None,
                  add_neg: bool = True,
                  n_random: int = 4,
                  n_backward: int = 2,
-                 use_small: bool = False): -> None
+                 use_small: bool = False) -> None:
 
         self.input_dir = input_dir
         self.encoder = encoder
