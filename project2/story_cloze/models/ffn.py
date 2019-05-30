@@ -144,7 +144,7 @@ class FFN(Model):
         return context_tensor
 
     def _build_fc_layers(self, inputs, reuse=tf.AUTO_REUSE):
-        with tf.variable_scope("FFN", reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("Dense", reuse=tf.AUTO_REUSE):
             for idx, layer_size in enumerate(self.hidden_layer_sizes):
                 inputs = tf.layers.dense(inputs=inputs, units=layer_size, activation=tf.nn.relu)
                 logger.info("Layer {} output shape: {} ".format(idx, inputs.shape))
@@ -152,7 +152,7 @@ class FFN(Model):
             logits = tf.layers.dense(inputs, units=2)
         return logits
 
-    def _build_model_graph(self, mode="train"):
+    def _compute_loss(self, mode="train"):
         if self.input_mode == "full_context":
             context_tensor = self._build_rnn(mode=mode)
         else:
@@ -215,9 +215,14 @@ class FFN(Model):
 
     def _build_optimizer(self, optimizer=None):
         if optimizer is None:
-            self.optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
+            self.optimizer = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate)
         else:
             self.optimizer = optimizer
+
+    def _build_model_graph(self, mode="train"):
+        """Sets up the computational graph in the model."""
+        with tf.variable_scope(self.__class__.__name__, reuse=tf.AUTO_REUSE):
+            self._compute_loss(mode=mode)
 
     def _build_train_summaries(self):
         self._train_summaries.extend([tf.summary.histogram("train/activations", self.train_probs),
