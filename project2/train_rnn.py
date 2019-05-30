@@ -79,7 +79,8 @@ def main():
     dataset = Dataset(encoder=encoder,
                       story_length=args.story_length,
                       input_dir=args.input_dir,
-                      n_random=args.n_random)
+                      n_random=args.n_random,
+                      load=False)
 
     logger.info("Building the model...")
     model = RNN(encoder=encoder,

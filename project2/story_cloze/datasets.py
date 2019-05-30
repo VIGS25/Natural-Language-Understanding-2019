@@ -7,6 +7,7 @@ import pandas as pd
 import os
 from typing import List, Dict, Tuple
 import logging
+import pickle
 
 from .embeddings.sentence_encoders import SentenceEncoder
 
@@ -31,7 +32,9 @@ class Dataset:
                  add_neg: bool = True,
                  n_random: int = 4,
                  n_backward: int = 2,
-                 use_small: bool = False) -> None:
+                 use_small: bool = False,
+                 load = False,
+                 ) -> None:
 
         self.input_dir = input_dir
         self.encoder = encoder
@@ -46,10 +49,13 @@ class Dataset:
         else:
             train_file = self.train_file
 
-        self._process_train(train_file)
-        self._process_eval()
-        self._encode_train()
-        self._encode_eval()
+        if not load:
+            self._process_train(train_file)
+            self._process_eval()
+            self._encode_train()
+            self._encode_eval()
+        else:
+            self.load()
 
     def _process_train(self, train_file):
         """Processes training set and augments it with negative endings."""
@@ -62,8 +68,8 @@ class Dataset:
         self.train_labels = np.ones((len(self.train_sentences), 1))
         self.n_train_stories = len(self.train_labels)
 
-        logger.info("Train sentences Shape: ", self.train_sentences.shape)
-        logger.info("Train labels shape: ", self.train_labels.shape)
+        logger.info("Train sentences Shape: ".format(self.train_sentences.shape))
+        logger.info("Train labels shape: ".format(self.train_labels.shape))
 
         if self.add_neg:
             logger.info("Adding negative endings.")
@@ -122,10 +128,27 @@ class Dataset:
     def _encode_train(self):
         logger.info("Encoding train sentences...")
         self.train_data = np.array([self.encoder.encode(x) for x in self.train_data])
+        filename = os.path.join(self.input_dir, "train_embeddings.npy")
+        logger.info("Embeddings shape: {}".format(self.train_data.shape))
+        np.save(filename, self.train_data, allow_pickle=False)
+        logger.info("Saved training embeddings.")
 
     def _encode_eval(self):
         logger.info("Encoding eval sentences...")
         self.eval_data = np.array([self.encoder.encode(x) for x in self.eval_data])
+        filename = os.path.join(self.input_dir, "eval_embeddings.npy")
+        logger.info("Embeddings shape: {}".format(self.eval_data.shape))
+        np.save(filename, self.eval_data, allow_pickle=False)
+        logger.info("Saved eval embeddings.")
+
+    def load(self):
+        logger.info("Loading the datasets...")
+
+        filename = os.path.join(self.input_dir, "train_embeddings.npy")
+        self.train_data = np.load(filename).astype(np.float32)
+
+        filename = os.path.join(self.input_dir, "eval_embeddings.npy")
+        self.eval_data = np.load(filename).astype(np.float32)
 
     def batch_generator(self, mode="train", batch_size=64, shuffle=True):
         """Generates batches of data for training.

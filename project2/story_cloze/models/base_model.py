@@ -158,8 +158,9 @@ class Model(object):
             for n_batch, train_batch in enumerate(dataset.batch_generator(mode="train", batch_size=batch_size, shuffle=True)):
                 self._train_batch(train_batch=train_batch, add_summary=n_batch % log_every == 0, verbose=n_batch % print_every == 0)
 
-            logger.info("Computing eval statistics...".format(epoch+1))
-            self.evaluate(dataset=dataset, epoch=epoch, verbose=True)
+                if n_batch % eval_every == 0:
+                    logger.info("Computing eval statistics. Epoch: {}, Batch num: {}".format(epoch+1, n_batch+1))
+                    self.evaluate(dataset=dataset, epoch=epoch, verbose=True)
 
             model_savepath = os.path.join(model_dir_epoch, "model.ckpt")
             self.save(model_savepath)
