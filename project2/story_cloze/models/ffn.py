@@ -149,7 +149,7 @@ class FFN(Model):
                 inputs = tf.layers.dense(inputs=inputs, units=layer_size, activation=tf.nn.relu)
                 logger.info("Layer {} output shape: {} ".format(idx, inputs.shape))
 
-            logits = tf.layers.dense(inputs, units=2, activation=tf.nn.relu)
+            logits = tf.layers.dense(inputs, units=2)
         return logits
 
     def _build_model_graph(self, mode="train"):
