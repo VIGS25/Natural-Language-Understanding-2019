@@ -96,7 +96,9 @@ def main():
                 restore_from=args.restore_from)
 
     logger.info("Training the model...")
-    model.fit(dataset, nb_epochs=args.num_epochs,
+    model.fit(dataset,
+              batch_size=args.batch_size,
+              nb_epochs=args.num_epochs,
               log_every=args.log_every,
               print_every=args.print_every,
               eval_every=args.eval_every)

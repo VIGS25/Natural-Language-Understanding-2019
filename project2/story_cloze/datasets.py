@@ -146,7 +146,6 @@ class Dataset:
 
     def load(self):
         logger.info("Loading the datasets...")
-
         filename = os.path.join(self.input_dir, "train_embeddings.npy")
         self.train_data = np.load(filename).astype(np.float32)
         self.n_stories = self.train_data.shape[0]
