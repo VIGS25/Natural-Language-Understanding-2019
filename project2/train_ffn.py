@@ -14,8 +14,8 @@ from story_cloze.models import FFN
 
 DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
 # DEFAULT_INPUT_DIR = None
-DEFAULT_LOG_DIR = "./logs"
-DEFAULT_MODEL_DIR = "./checkpoints"
+DEFAULT_LOG_DIR = os.path.join(os.environ["SCRATCH"], "logs")
+DEFAULT_MODEL_DIR = os.path.join(os.environ["SCRATCH"], "checkpoints")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -75,7 +75,7 @@ def main():
         os.makedirs(log_dir)
 
     logger.info("Starting to run the experiment {}".format(exp_name))
-    print("Parameters used: {}".format(args))
+    logger.info("Parameters used: {}".format(args))
     dataset = Dataset(encoder=encoder,
                       story_length=args.story_length,
                       input_dir=args.input_dir,
