@@ -60,12 +60,11 @@ def main():
             embedding_dim = 4800
         encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode)
     elif args.encoder_type == "universal":
-        encoder = UniversalEncoder()
         embedding_dim = 512
     else:
         raise ValueError("Encoder of type {} is not supported.".format(args.encoder_type))
 
-    exp_name = "SidSri_FFN" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
+    exp_name = "SidSri_FFN_" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
     model_dir = os.path.join(args.model_dir, exp_name)
     log_dir = os.path.join(args.log_dir, exp_name)
 
@@ -76,10 +75,16 @@ def main():
 
     logger.info("Starting to run the experiment {}".format(exp_name))
     logger.info("Parameters used: {}".format(args))
-    dataset = Dataset(encoder=encoder,
-                      story_length=args.story_length,
-                      input_dir=args.input_dir,
-                      n_random=args.n_random)
+
+    if args.encoder_type != "universal":
+        dataset = Dataset(encoder=encoder,
+                          story_length=args.story_length,
+                          input_dir=args.input_dir,
+                          n_random=args.n_random)
+    else:
+        dataset = UniversalEncoderDataset(story_length=args.story_length,
+                                          input_dir=args.input_dir,
+                                          n_random=args.n_random)
 
     logger.info("Building the model...")
     model = FFN(embedding_dim=embedding_dim,
@@ -92,7 +97,7 @@ def main():
                 max_checkpoints_to_keep=args.max_checkpoints_to_keep,
                 trainable_zero_state=args.trainable_zero_state,
                 restore_from=args.restore_from)
-    
+
     logger.info("Training the model...")
     model.fit(dataset,
               batch_size=args.batch_size,

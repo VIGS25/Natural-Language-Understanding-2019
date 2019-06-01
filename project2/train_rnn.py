@@ -60,7 +60,6 @@ def main():
             embedding_dim = 4800
         encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode)
     elif args.encoder_type == "universal":
-        encoder = UniversalEncoder()
         embedding_dim = 512
     else:
         raise ValueError("Encoder of type {} is not supported.".format(args.encoder_type))
@@ -76,10 +75,16 @@ def main():
 
     logger.info("Starting to run the experiment {}".format(exp_name))
     logger.info("Parameters used: {}".format(args))
-    dataset = Dataset(encoder=encoder,
-                      story_length=args.story_length,
-                      input_dir=args.input_dir,
-                      n_random=args.n_random)
+
+    if args.encoder_type != "universal":
+        dataset = Dataset(encoder=encoder,
+                          story_length=args.story_length,
+                          input_dir=args.input_dir,
+                          n_random=args.n_random)
+    else:
+        dataset = UniversalEncoderDataset(story_length=args.story_length,
+                                          input_dir=args.input_dir,
+                                          n_random=args.n_random)
 
     logger.info("Building the model...")
     model = RNN(embedding_dim=embedding_dim,
