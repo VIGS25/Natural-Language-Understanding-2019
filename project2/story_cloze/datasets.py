@@ -49,7 +49,10 @@ class Dataset:
 
         self.load(train_file)
         self._process_eval(eval_file)
-        self._encode_eval()
+        if self.encoder.__class__.__name__ != "UniversalEncoder":
+            self._encode_eval()
+        else:
+            self.load_eval()
 
     def _process_train(self, train_file):
         """Processes training set and augments it with negative endings."""
@@ -133,6 +136,14 @@ class Dataset:
         logger.info("Encoding eval sentences...")
         self.eval_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.eval_data])
         logger.info("Embeddings shape: {}".format(self.eval_data.shape))
+
+    def load_eval(self):
+        logger.info("Loading eval sentences.")
+        encoder_name = self.encoder.__class__.__name__
+        embed_name = "eval_embeddings_" + encoder_name + ".npy"
+        embed_name = os.path.join(self.input_dir, embed_name)
+
+        self.eval_data = np.load(embed_name).astype(np.float32)
 
     def load(self, train_file: str):
         logger.info("Loading the embeddings and labels...")
