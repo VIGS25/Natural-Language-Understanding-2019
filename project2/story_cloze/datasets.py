@@ -307,8 +307,9 @@ class UniversalEncoderDataset(object):
             eval_data = pickle.load(f)
 
         eval_story = eval_data["data"].astype(np.float32)
-        eval_endings = eval_data["endings"].astype(np.float2)
-        self.eval_data = np.concatenate([eval_story, eval_endings], axis=1)
+        eval_endings1 = np.expand_dims(eval_data["endings1"].astype(np.float32), axis=1)
+        eval_endings2 = np.expand_dims(eval_data["endings2"].astype(np.float32), axis=1)
+        self.eval_data = np.concatenate([eval_story, eval_endings1, eval_endings2], axis=1)
 
         logger.info("Eval sentences shape: {}".format(self.eval_data.shape))
         logger.info("Eval endings shape: {}".format(self.eval_correct_endings.shape))
@@ -328,7 +329,9 @@ class UniversalEncoderDataset(object):
             with open(embed_name, "rb") as f:
                 train_data = pickle.load(f)
 
-            self.train_data = train_data["data"].astype(np.float32)
+            train_story = train_data["data"].astype(np.float32)
+            train_ending = np.expand_dims(train_data["endings"].astype(np.float32), axis=1)
+            self.train_data = np.concatenate([train_story, train_ending], axis=1)
             self.train_labels = np.ones((len(self.train_data), 1))
             self.n_train_stories = self.train_data.shape[0]
 
