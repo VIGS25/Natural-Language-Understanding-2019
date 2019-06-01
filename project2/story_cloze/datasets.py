@@ -62,8 +62,8 @@ class Dataset:
         self.train_labels = np.ones((len(self.train_sentences), 1))
         self.n_train_stories = len(self.train_labels)
 
-        logger.info("Train sentences Shape: ".format(self.train_sentences.shape))
-        logger.info("Train labels shape: ".format(self.train_labels.shape))
+        logger.info("Train sentences Shape: {}".format(self.train_sentences.shape))
+        logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
         self.train_data = self.train_df.apply(lambda x: list([x[col] for col in self.train_cols]),axis=1)
         del self.train_df
@@ -156,6 +156,9 @@ class Dataset:
             self.train_labels = np.ones((len(self.train_data), 1))
             self.n_train_stories = self.train_data.shape[0]
 
+            logger.info("Train data shape: {}".format(self.train_data.shape))
+            logger.info("Train labels shape: {}".format(self.train_labels.shape))
+
         if self.add_neg:
             logger.info("Adding negative endings.")
             self._add_negative_endings(n_random=self.n_random, n_backward=self.n_backward)
@@ -225,7 +228,7 @@ class UniversalEncoderDataset(object):
 
         self.load(train_file)
         self._process_eval(eval_file)
-        self.load_eval()
+        self.load_eval(eval_file)
 
     def _process_train(self, train_file):
         """Processes training set and augments it with negative endings."""
@@ -290,17 +293,25 @@ class UniversalEncoderDataset(object):
         ending_idxs = np.asarray(ending_idxs).flatten()
         return ending_idxs
 
-    def load_eval(self):
+    def load_eval(self, eval_file):
         logger.info("Loading eval sentences.")
         encoder_name = "UniversalEncoder"
         embed_name = "eval_embeddings_" + encoder_name + ".npy"
         embed_name = os.path.join(self.input_dir, embed_name)
 
+        self.eval_df = pd.read_csv(os.path.join(self.input_dir, eval_file))
+        correct_ending_idxs = self.eval_df["AnswerRightEnding"] - 1
+        self.eval_correct_endings = correct_ending_idxs.values
+
         with open(embed_name, "rb") as f:
             eval_data = pickle.load(f)
 
-        self.eval_data = eval_data["data"].astype(np.float32)
-        self.eval_correct_endings = eval_data["correct_end"].astype(np.float32)
+        eval_story = eval_data["data"].astype(np.float32)
+        eval_endings = eval_data["endings"].astype(np.float2)
+        self.eval_data = np.concatenate([eval_story, eval_endings], axis=1)
+
+        logger.info("Eval sentences shape: {}".format(self.eval_data.shape))
+        logger.info("Eval endings shape: {}".format(self.eval_correct_endings.shape))
 
     def load(self, train_file: str):
         logger.info("Loading the embeddings and labels...")
