@@ -130,7 +130,7 @@ class RNN(Model):
     def _build_rnn(self, mode="train"):
         """Builds the RNN."""
         with tf.variable_scope(self.rnn_type.upper(), reuse=tf.AUTO_REUSE):
-            self.rnn_cell = get_rnn_cell(rnn_type=self.rnn_type)
+            self.rnn_cell = get_rnn_cell(rnn_type=self.rnn_type, num_hidden_units=self.num_hidden_units)
             if not self.trainable_zero_state:
                 state = self.rnn_cell.zero_state(batch_size=self.batch_size, dtype=tf.float32)
             else:

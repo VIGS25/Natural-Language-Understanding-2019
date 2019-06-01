@@ -1,3 +1,3 @@
-from .datasets import Dataset
+from .datasets import Dataset, UniversalEncoderDataset
 
-__init__ = ("Dataset")
+__init__ = ("Dataset", "UniversalEncoderDataset")

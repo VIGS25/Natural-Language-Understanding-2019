@@ -8,7 +8,7 @@ import os
 import numpy as np
 import logging
 
-from story_cloze import Dataset
+from story_cloze import Dataset, UniversalEncoderDataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import FFN
 
