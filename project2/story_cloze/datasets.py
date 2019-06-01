@@ -296,7 +296,11 @@ class UniversalEncoderDataset(object):
         embed_name = "eval_embeddings_" + encoder_name + ".npy"
         embed_name = os.path.join(self.input_dir, embed_name)
 
-        self.eval_data = np.load(embed_name).astype(np.float32)
+        with open(embed_name, "rb") as f:
+            eval_data = pickle.load(f)
+
+        self.eval_data = eval_data["data"].astype(np.float32)
+        self.eval_correct_endings = eval_data["correct_end"].astype(np.float32)
 
     def load(self, train_file: str):
         logger.info("Loading the embeddings and labels...")
@@ -310,9 +314,15 @@ class UniversalEncoderDataset(object):
             self._encode_train()
 
         else:
-            self.train_data = np.load(embed_name).astype(np.float32)
+            with open(embed_name, "rb") as f:
+                train_data = pickle.load(f)
+
+            self.train_data = train_data["data"].astype(np.float32)
             self.train_labels = np.ones((len(self.train_data), 1))
             self.n_train_stories = self.train_data.shape[0]
+
+            logger.info("Train data shape: {}".format(self.train_data.shape))
+            logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
         if self.add_neg:
             logger.info("Adding negative endings.")
