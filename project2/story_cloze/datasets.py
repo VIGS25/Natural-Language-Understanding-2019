@@ -65,10 +65,6 @@ class Dataset:
         logger.info("Train sentences Shape: ".format(self.train_sentences.shape))
         logger.info("Train labels shape: ".format(self.train_labels.shape))
 
-        if self.add_neg:
-            logger.info("Adding negative endings.")
-            self._add_negative_endings(n_random=self.n_random, n_backward=self.n_backward)
-
         self.train_data = self.train_df.apply(lambda x: list([x[col] for col in self.train_cols]),axis=1)
         del self.train_df
 
@@ -76,25 +72,24 @@ class Dataset:
         """Adds specified number of backward and random negative endings for each story."""
         if n_random:
             logger.info("Sampling {} random endings per story.".format(n_random))
-            random_endings = self.sample_random_endings(n_samples=n_random).reshape(-1, 1)
-            train_story_augment = np.array([self.train_sentences[:, :self.story_length]]*n_random)
-            train_story_augment = train_story_augment.reshape(-1, 4)
+            ending_idxs = self.sample_random_endings(n_samples=n_random)
+            train_story_augment = np.array([self.train_data[:, :self.story_length]]*n_random)
+            train_story_augment = train_story_augment.reshape(-1, 4, self.train_data.shape[-1])
+            train_endings_sampled = np.expand_dims(self.train_data[ending_idxs, -1], axis=1)
+            assert len(train_story_augment) == len(train_endings_sampled)
 
-            train_augment = np.hstack([train_story_augment, random_endings])
-            assert train_augment.shape[-1] == self.story_length + 1
+            train_augment = np.concatenate([train_story_augment, train_endings_sampled], axis=1)
+            assert train_augment.shape[1] == self.story_length + 1
+            assert train_augment.shape[-1] == self.train_data.shape[-1]
 
             train_labels = np.zeros(shape=(train_augment.shape[0], 1))
-            self.train_sentences = np.vstack([self.train_sentences, train_augment])
+            self.train_data = np.vstack([self.train_data, train_augment])
             self.train_labels = np.vstack([self.train_labels, train_labels])
-            assert len(self.train_sentences) == len(self.train_labels)
+            assert len(self.train_data) == len(self.train_labels)
 
             logger.info("After adding random endings..")
-            logger.info("Train sentences shape: {}".format(self.train_sentences.shape))
+            logger.info("Train data shape: {}".format(self.train_data.shape))
             logger.info("Train labels shape: {}".format(self.train_labels.shape))
-
-        train_sent_df = pd.DataFrame(self.train_sentences, columns=self.train_cols)
-        self.train_df = train_sent_df
-        del self.train_sentences
 
     def _process_eval(self, eval_file: str):
         self.eval_df = pd.read_csv(os.path.join(self.input_dir, eval_file))
@@ -116,31 +111,40 @@ class Dataset:
         ending_idxs = list()
         for _ in range(n_samples):
             ending_idxs.append(np.random.permutation(self.n_train_stories))
-        ending_idxs = np.asarray(ending_idxs)
-        return self.train_sentences[ending_idxs, -1]
+        ending_idxs = np.asarray(ending_idxs).flatten()
+        return ending_idxs
 
     def _encode_train(self):
         logger.info("Encoding train sentences...")
         self.train_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.train_data])
         encoder_name = self.encoder.__class__.__name__
+        embed_name = "train_embeddings_" + encoder_name
 
-        embed_name = os.path.join(self.input_dir, "train_embeddings_" + encoder_name + "_" + self.encoder.mode  + ".npy")
+        if self.encoder.__class__.__name__ == "SkipThoughts":
+            embed_name += "_" + self.encoder.mode  + ".npy"
+        else:
+            embed_name += ".npy"
+
+        embed_name = os.path.join(self.input_dir, embed_name)
         np.save(embed_name, self.train_data, allow_pickle=False)
-
-        label_name = os.path.join(self.input_dir, "train_labels_" + encoder_name + "_" + self.encoder.mode  + ".npy")
-        np.save(label_name, self.train_labels, allow_pickle=False)
         logger.info("Saved training embeddings.")
 
     def _encode_eval(self):
         logger.info("Encoding eval sentences...")
         self.eval_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.eval_data])
-        filename = os.path.join(self.input_dir, "eval_embeddings.npy")
         logger.info("Embeddings shape: {}".format(self.eval_data.shape))
 
     def load(self, train_file: str):
         logger.info("Loading the embeddings and labels...")
         encoder_name = self.encoder.__class__.__name__
-        embed_name = os.path.join(self.input_dir, "train_embeddings_" + encoder_name + "_" + self.encoder.mode  + ".npy")
+        embed_name = "train_embeddings_" + encoder_name
+
+        if self.encoder.__class__.__name__ == "SkipThoughts":
+            embed_name += "_" + self.encoder.mode  + ".npy"
+        else:
+            embed_name += ".npy"
+
+        embed_name = os.path.join(self.input_dir, embed_name)
 
         if not os.path.exists(embed_name):
             logger.warning("{} does not exist. Encoding embeddings.".format(embed_name))
@@ -149,10 +153,14 @@ class Dataset:
 
         else:
             self.train_data = np.load(embed_name).astype(np.float32)
-            self.n_stories = self.train_data.shape[0]
-            label_name = os.path.join(self.input_dir, "train_labels_" + encoder_name + "_" + self.encoder.mode  + ".npy")
-            self.train_labels = np.load(label_name).astype(np.float32)
+            self.train_labels = np.ones((len(self.train_data), 1))
+            self.n_train_stories = self.train_data.shape[0]
 
+        if self.add_neg:
+            logger.info("Adding negative endings.")
+            self._add_negative_endings(n_random=self.n_random, n_backward=self.n_backward)
+
+        logger.info("After adding negative endings..")
         logger.info("Train dataset shape: {}".format(self.train_data.shape))
         logger.info("Train labels shape: {}".format(self.train_labels.shape))
 
