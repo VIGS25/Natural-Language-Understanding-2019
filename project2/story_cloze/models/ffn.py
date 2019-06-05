@@ -180,6 +180,12 @@ class FFN(Model):
             with tf.name_scope("Loss"):
                 self.loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(logits=self.train_logits, labels=labels))
 
+            with tf.name_scope("optimizer"):
+                self._build_optimizer()
+                gradients = self.optimizer.compute_gradients(self.loss)
+                clipped_gradients = [(tf.clip_by_norm(gradient, self.clip_norm), var) for gradient, var in gradients]
+                self.train_op = self.optimizer.apply_gradients(clipped_gradients, global_step=self._get_tf_object("GlobalStep"))
+            
         else:
             eval_ending1 = tf.squeeze(self.eval_ending1, axis=1)
             eval_ending2 = tf.squeeze(self.eval_ending2, axis=1)
@@ -204,14 +210,6 @@ class FFN(Model):
 
             correct_ending_probs = tf.concat([self.eval_probs1, self.eval_probs2], axis=1)
             self.eval_predictions = tf.argmax(correct_ending_probs, axis=1)
-
-        with tf.name_scope("optimizer"):
-            self._build_optimizer()
-            gradients = self.optimizer.compute_gradients(self.loss)
-            clipped_gradients = [(tf.clip_by_norm(gradient, self.clip_norm), var) for gradient, var in gradients]
-            self.train_op = self.optimizer.apply_gradients(clipped_gradients, global_step=self._get_tf_object("GlobalStep"))
-
-            variables = tf.trainable_variables()
 
     def _build_optimizer(self, optimizer=None):
         if optimizer is None:

@@ -166,6 +166,12 @@ class RNN(Model):
             with tf.name_scope("train_loss"):
                 self.loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.train_logits, labels=self.labels_ph))
 
+            with tf.name_scope("optimizer"):
+                self._build_optimizer()
+                gradients = self.optimizer.compute_gradients(self.loss)
+                clipped_gradients = [(tf.clip_by_norm(gradient, self.clip_norm), var) for gradient, var in gradients]
+                self.train_op = self.optimizer.apply_gradients(clipped_gradients, global_step=self._get_tf_object("GlobalStep"))
+
         else:
             rnn_final_state1 = self.eval1_states[-1]
             rnn_final_state2 = self.eval2_states[-1]
@@ -187,14 +193,6 @@ class RNN(Model):
 
             self.eval_logits = tf.concat([self.eval_logits1, self.eval_logits2], axis=1)
             self.eval_predictions = tf.argmax(self.eval_logits, axis=1)
-
-        with tf.name_scope("optimizer"):
-            self._build_optimizer()
-            gradients = self.optimizer.compute_gradients(self.loss)
-            clipped_gradients = [(tf.clip_by_norm(gradient, self.clip_norm), var) for gradient, var in gradients]
-            self.train_op = self.optimizer.apply_gradients(clipped_gradients, global_step=self._get_tf_object("GlobalStep"))
-
-            variables = tf.trainable_variables()
 
     def _evaluate_batch(self, encoded_eval):
         """Computes metrics on eval batches."""
