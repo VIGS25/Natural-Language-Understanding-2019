@@ -55,6 +55,7 @@ class Model(object):
 
         self._train_summaries  = list()
         self._eval_summaries = list()
+        self.best_eval_accuracy = -np.inf
 
     def _build_model_graph(self):
         raise NotImplementedError("Subclasses must implement for themselves.")
@@ -100,14 +101,6 @@ class Model(object):
         except KeyError:
             raise ValueError(obj + " missing in the tf_objects dictionary")
 
-    def _log_tensorboard(self, summary):
-        """Logs summary to TensorBoard."""
-        global_step = self._get_tf_object("Session").run(self._get_tf_object("GlobalStep"))
-        writer = self._get_tf_object("FileWriter")
-        writer.reopen()
-        writer.add_summary(summary, global_step=global_step)
-        writer.close()
-
     def evaluate(self, dataset, epoch, verbose=False):
         """Computes accuracy on eval data."""
         labels = list()
@@ -136,6 +129,12 @@ class Model(object):
 
         timestep = self._get_tf_object("Session").run(self._get_tf_object("GlobalStep"))
 
+        if eval_accuracy > self.best_eval_accuracy:
+            self.best_eval_accuracy = eval_accuracy
+            model_savepath = os.path.join(self.model_dir, "model-{}.ckpt".format(timestep))
+            self.save(model_savepath)
+            logger.info("Saving best model so far..")
+
         if verbose:
             logger.info("Epoch Num: {0:d}, TimeStep: {1:d}, Eval Accuracy: {2:.3f}".format(epoch, timestep, eval_accuracy))
             logger.info("\n")
@@ -150,10 +149,6 @@ class Model(object):
         start_time = time.time()
 
         for epoch in range(nb_epochs):
-            model_dir_epoch = os.path.join(self.model_dir, str(epoch+1))
-            if not os.path.exists(model_dir_epoch):
-                os.makedirs(model_dir_epoch)
-
             logger.info("Computing train statistics, Epoch {}".format(epoch+1))
             for n_batch, train_batch in enumerate(dataset.batch_generator(mode="train", batch_size=batch_size, shuffle=True)):
                 self._train_batch(train_batch=train_batch, add_summary=n_batch % log_every == 0, verbose=n_batch % print_every == 0)
@@ -161,9 +156,6 @@ class Model(object):
                 if n_batch % eval_every == 0:
                     logger.info("Computing eval statistics. Epoch: {}, Batch num: {}".format(epoch+1, n_batch+1))
                     self.evaluate(dataset=dataset, epoch=epoch, verbose=True)
-
-            model_savepath = os.path.join(model_dir_epoch, "model.ckpt")
-            self.save(model_savepath)
 
         total_time = time.time() - start_time
         logger.info("Finished training the model. Time taken: {} seconds".format(total_time))
