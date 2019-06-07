@@ -12,17 +12,16 @@ from story_cloze import Dataset, UniversalEncoderDataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import BiRNN
 
-DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
-DEFAULT_LOG_DIR = os.path.join(os.environ["SCRATCH"], "logs")
-DEFAULT_MODEL_DIR = os.path.join(os.environ["SCRATCH"], "checkpoints")
+SCRATCH_DIR = os.environ(["SCRATCH"])
+INPUT_DIR = os.path.join(SCRATCH_DIR, "data")
 
 def main():
     parser = argparse.ArgumentParser()
 
     # I/O
-    parser.add_argument("--input_dir", default=DEFAULT_INPUT_DIR, help="Directory where data is present.")
-    parser.add_argument("--log_dir", default=DEFAULT_LOG_DIR, help="Where to save Tensorboard-Logs to")
-    parser.add_argument("--model_dir", default=DEFAULT_MODEL_DIR, help="Where to save models to.")
+    parser.add_argument("--input_dir", default=INPUT_DIR, help="Directory where data is present.")
+    parser.add_argument("--log_dir", default=SCRATCH_DIR, help="Where to save Tensorboard-Logs to")
+    parser.add_argument("--model_dir", default=SCRATCH_DIR, help="Where to save models to.")
     parser.add_argument("--restore_from", default=None, help="Where to restore pretrained model from.")
     parser.add_argument("--max_checkpoints_to_keep", default=5, type=int, help="How many checkpoints to keep.")
 
@@ -65,9 +64,9 @@ def main():
     else:
         raise ValueError("Encoder of type {} is not supported.".format(args.encoder_type))
 
-    exp_name = "Roemelle_RNN_" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
-    model_dir = os.path.join(args.model_dir, exp_name)
-    log_dir = os.path.join(args.log_dir, exp_name)
+    exp_name = "Roemelle_BiRNN_" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
+    model_dir = os.path.join(args.model_dir, exp_name, "checkpoints")
+    log_dir = os.path.join(args.log_dir, exp_name, "logs")
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)

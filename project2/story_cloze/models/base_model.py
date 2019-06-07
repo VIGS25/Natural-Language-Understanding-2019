@@ -131,7 +131,7 @@ class Model(object):
 
         if eval_accuracy > self.best_eval_accuracy:
             self.best_eval_accuracy = eval_accuracy
-            model_savepath = os.path.join(self.model_dir, "model-{}.ckpt".format(timestep))
+            model_savepath = os.path.join(self.model_dir, "model.ckpt")
             self.save(model_savepath)
             logger.info("Saving best model so far..")
 
