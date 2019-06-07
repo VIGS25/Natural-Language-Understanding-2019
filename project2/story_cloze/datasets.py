@@ -252,19 +252,19 @@ class UniversalEncoderDataset(object):
         if n_random:
             logger.info("Sampling {} random endings per story.".format(n_random))
             ending_idxs = self.sample_random_endings(n_samples=n_random)
-            for _, ending_idx in enumerate(ending_idxs):
-                train_endings_sampled = np.expand_dims(self.train_data[ending_idx, -1], axis=1)
-                train_story_augment = self.train_data[:, :self.n_story_sentences]
-                assert len(train_story_augment) == len(train_endings_sampled)
-                train_augment = np.concatenate([train_story_augment, train_endings_sampled], axis=1)
+            train_story_augment = np.array([self.train_data[:, :self.story_length]]*n_random)
+            train_story_augment = train_story_augment.reshape(-1, 4, self.train_data.shape[-1])
+            train_endings_sampled = np.expand_dims(self.train_data[ending_idxs, -1], axis=1)
+            assert len(train_story_augment) == len(train_endings_sampled)
 
-                assert train_augment.shape[1] == self.story_length + 1
-                assert train_augment.shape[-1] == self.train_data.shape[-1]
+            train_augment = np.concatenate([train_story_augment, train_endings_sampled], axis=1)
+            assert train_augment.shape[1] == self.story_length + 1
+            assert train_augment.shape[-1] == self.train_data.shape[-1]
 
-                train_labels = np.zeros(shape=(train_augment.shape[0], 1))
-                self.train_data = np.vstack([self.train_data, train_augment])
-                self.train_labels = np.vstack([self.train_labels, train_labels])
-                assert len(self.train_data) == len(self.train_labels)
+            train_labels = np.zeros(shape=(train_augment.shape[0], 1))
+            self.train_data = np.vstack([self.train_data, train_augment])
+            self.train_labels = np.vstack([self.train_labels, train_labels])
+            assert len(self.train_data) == len(self.train_labels)
 
             logger.info("After adding random endings..")
             logger.info("Train data shape: {}".format(self.train_data.shape))
