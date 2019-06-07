@@ -13,7 +13,6 @@ from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import RNN
 
 DEFAULT_INPUT_DIR = os.path.join(os.environ["SCRATCH"], "data")
-# DEFAULT_INPUT_DIR = None
 DEFAULT_LOG_DIR = os.path.join(os.environ["SCRATCH"], "logs")
 DEFAULT_MODEL_DIR = os.path.join(os.environ["SCRATCH"], "checkpoints")
 
@@ -35,6 +34,8 @@ def main():
     parser.add_argument("--embed_mode", default="bi", choices=["bi", "uni", "both"], help="Embeddings to use for SkipThoughts")
     parser.add_argument("--clip_norm", type=float, default=10.0, help="Gradient clipping norm")
     parser.add_argument("--trainable_zero_state", action="store_true", help="Whether to train zero state.")
+    parser.add_argument("--use_attn", action="store_true", help='Whether to use Attention')
+    parser.add_argument("--attn_type", default="multiplicative", choices=["multiplicative", "additive"], help="Type of attention used.")
 
     # Dataset specific
     parser.add_argument("--story_length", type=int, default=4, help="Size of story used.")
@@ -95,6 +96,8 @@ def main():
                 clip_norm=args.clip_norm,
                 model_dir=model_dir, log_dir=log_dir,
                 max_checkpoints_to_keep=args.max_checkpoints_to_keep,
+                use_attn=args.use_attn,
+                attn_type=args.attn_type,
                 trainable_zero_state=args.trainable_zero_state,
                 restore_from=args.restore_from)
 

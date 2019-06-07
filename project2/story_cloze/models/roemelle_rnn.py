@@ -7,10 +7,12 @@ This model is derived from the one presented in An RNN Based Binary Classifier f
 import numpy as np
 import tensorflow as tf
 import os
-from .base_model import Model
 from typing import List, Dict, Tuple
 import time
 import logging
+
+from .base_model import Model
+from ..attention import Attention
 
 DEF_MODEL_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../outputs"))
 
@@ -47,6 +49,8 @@ class RNN(Model):
                  num_hidden_units: int = 1000,
                  trainable_zero_state: bool = False,
                  max_checkpoints_to_keep: int = 5,
+                 use_attn: bool = False,
+                 attn_type: str = "multiplicative",
                  clip_norm: float = 10.0,
                  model_dir: str = None,
                  log_dir: str = None,
@@ -63,6 +67,8 @@ class RNN(Model):
             Type of RNN cell
         num_hidden_units: int, default 1000
             Number of hidden units in the RNN cell
+        use_attn: bool, default False
+            Whether to use attention as well
         trainable_zero_state: bool, default False
             Whether to make zero state trainable
         tensorboard_log_frequency: int, default 10
@@ -75,6 +81,8 @@ class RNN(Model):
         self.embedding_dim = embedding_dim
         self.n_story_sentences = n_story_sentences
         self.rnn_type = rnn_type
+        self.use_attn = use_attn
+        self.attn_type = attn_type
         self.num_hidden_units = num_hidden_units
         self.trainable_zero_state = trainable_zero_state
         self.clip_norm = clip_norm
@@ -108,24 +116,25 @@ class RNN(Model):
         logger.info("Eval input1: {}".format(self.eval_in1.shape))
         logger.info("Eval input2: {}".format(self.eval_in2.shape))
 
+    def _unroll_loop(self, state, inputs):
+        states = list()
+        for time_step in range(self.n_story_sentences + 1):
+            out, state = self.rnn_cell(inputs[:, time_step, :], state)
+            if self.rnn_type == "lstm":
+                states.append(state[0])
+            else:
+                states.append(state)
+
+        return states
+
     def _unroll_rnn_cell(self, state, mode="train"):
         """Unrolls the RNN cell."""
         if mode == "train":
-            for time_step in range(self.n_story_sentences + 1):
-                out, state = self.rnn_cell(self.input_ph[:, time_step, :], state)
-                self.train_outputs.append(out)
-                self.train_states.append(state)
+            self.train_states = self._unroll_loop(state, self.input_ph)
 
         else:
-            for time_step in range(self.n_story_sentences + 1):
-                out, state = self.rnn_cell(self.eval_in1[:, time_step, :], state)
-                self.eval1_outputs.append(out)
-                self.eval1_states.append(state)
-
-            for time_step in range(self.n_story_sentences + 1):
-                out, state = self.rnn_cell(self.eval_in2[:, time_step, :], state)
-                self.eval2_outputs.append(out)
-                self.eval2_states.append(state)
+            self.eval1_states = self._unroll_loop(state, self.eval_in1)
+            self.eval2_states = self._unroll_loop(state, self.eval_in2)
 
     def _build_rnn(self, mode="train"):
         """Builds the RNN."""
@@ -135,12 +144,17 @@ class RNN(Model):
                 state = self.rnn_cell.zero_state(batch_size=self.batch_size, dtype=tf.float32)
             else:
                 raise NotImplementedError("Trainable zero state not supported yet.")
-            if mode == "train":
-                self.train_states.append(state)
-            else:
-                self.eval1_states.append(state)
-                self.eval2_states.append(state)
+            # if mode == "train":
+            #     self.train_states.append(state)
+            # else:
+            #     self.eval1_states.append(state)
+            #     self.eval2_states.append(state)
             self._unroll_rnn_cell(state=state, mode=mode)
+
+    def _build_attention(self, reuse=tf.AUTO_REUSE):
+        with tf.variable_scope("attention", reuse=reuse):
+            self.attention_layer = Attention(att_type=self.attn_type, num_units=self.num_hidden_units,
+                                             memory_length=self.n_story_sentences)
 
     def _build_fc_layer(self, inputs, reuse=tf.AUTO_REUSE):
         with tf.variable_scope("FC", reuse=reuse):
@@ -152,10 +166,12 @@ class RNN(Model):
     def _compute_loss(self, mode="train"):
         if mode == "train":
             rnn_final_state = self.train_states[-1]
-            if self.rnn_type == "lstm":
-                rnn_final_state = rnn_final_state[0]
             logger.info("Final RNN hidden state: {}".format(rnn_final_state.shape.as_list()))
             assert rnn_final_state.shape.as_list()[-1] == self.num_hidden_units
+
+            if self.use_attn:
+                rnn_final_state = self.attention_layer(tf.stack(self.train_states[:-1], axis=1), rnn_final_state)
+                logger.info("Final hidden state post-attention: {}".format(rnn_final_state.shape.as_list()))
 
             self.train_logits = self._build_fc_layer(inputs=rnn_final_state, reuse=tf.AUTO_REUSE)
             self.train_probs = tf.sigmoid(self.train_logits)
@@ -175,15 +191,17 @@ class RNN(Model):
         else:
             rnn_final_state1 = self.eval1_states[-1]
             rnn_final_state2 = self.eval2_states[-1]
-
-            if self.rnn_type == "lstm":
-                rnn_final_state1 = rnn_final_state1[0]
-                rnn_final_state2 = rnn_final_state2[0]
-
+            
             logger.info("Final RNN hidden state1: {}".format(rnn_final_state1.shape.as_list()))
             assert rnn_final_state1.shape.as_list()[-1] == self.num_hidden_units
             logger.info("Final RNN hidden state2: {}".format(rnn_final_state2.shape.as_list()))
             assert rnn_final_state2.shape.as_list()[-1] == self.num_hidden_units
+
+            if self.use_attn:
+                rnn_final_state1 = self.attention_layer(tf.stack(self.eval1_states[:-1], axis=1), rnn_final_state1)
+                logger.info("Final hidden state1 post-attention: {}".format(rnn_final_state1.shape.as_list()))
+                rnn_final_state2 = self.attention_layer(tf.stack(self.eval2_states[:-1], axis=1), rnn_final_state2)
+                logger.info("Final hidden state2 post-attention: {}".format(rnn_final_state1.shape.as_list()))
 
             self.eval_logits1 = self._build_fc_layer(inputs=rnn_final_state1, reuse=True)
             self.eval_logits2 = self._build_fc_layer(inputs=rnn_final_state2, reuse=True)
@@ -262,6 +280,8 @@ class RNN(Model):
         """Sets up the computational graph in the model."""
         with tf.variable_scope(self.__class__.__name__, reuse=tf.AUTO_REUSE):
             self._build_rnn(mode=mode)
+            if self.use_attn:
+                self._build_attention()
             self._compute_loss(mode=mode)
 
 if __name__ == "__main__":
