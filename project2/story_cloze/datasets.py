@@ -265,7 +265,6 @@ class UniversalEncoderDataset(object):
             self.train_data = np.vstack([self.train_data, train_augment])
             self.train_labels = np.vstack([self.train_labels, train_labels])
             assert len(self.train_data) == len(self.train_labels)
-
             logger.info("After adding random endings..")
             logger.info("Train data shape: {}".format(self.train_data.shape))
             logger.info("Train labels shape: {}".format(self.train_labels.shape))

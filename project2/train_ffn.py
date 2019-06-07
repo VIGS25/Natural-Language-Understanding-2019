@@ -36,7 +36,7 @@ def main():
 
     # Dataset specific
     parser.add_argument("--story_length", type=int, default=4, help="Size of story used.")
-    parser.add_argument("--n_random", type=int, default=1, help="Number of random endings generated")
+    parser.add_argument("--n_random", type=int, default=6, help="Number of random endings generated")
 
     # Training specific
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate used.")
@@ -44,10 +44,16 @@ def main():
     parser.add_argument("--log_every", type=int, default=100, help="Log stats every.")
     parser.add_argument("--print_every", type=int, default=100, help="Print stats every.")
     parser.add_argument("--eval_every", type=int, default=100, help="Eval every")
+    parser.add_argument("--flush_log", action="store_true", help="Flag to flush logger to file.")
 
     args = parser.parse_args()
+    exp_name = f'SidSri_FFN_{args.rnn_type}_{dt.now().strftime("%d-%m-%Y--%H-%M-%S")}'
 
-    logging.basicConfig(level=logging.DEBUG)
+    log_params = {'level': logging.DEBUG, 'format': "%(asctime)s - [%(levelname)s] %(message)s"}
+    if args.flush_log:
+        log_params.update({'filename': os.path.join("logs", exp_name), 'filemode': 'a'})
+
+    logging.basicConfig(**log_params)
     logger = logging.getLogger(__name__)
 
     if args.encoder_type == "skipthoughts":
@@ -62,7 +68,6 @@ def main():
     else:
         raise ValueError("Encoder of type {} is not supported.".format(args.encoder_type))
 
-    exp_name = "SidSri_FFN_" + dt.now().strftime("%d-%m-%Y--%H-%M-%S")
     model_dir = os.path.join(args.model_dir, exp_name, "checkpoints")
     log_dir = os.path.join(args.log_dir, exp_name, "logs")
 
