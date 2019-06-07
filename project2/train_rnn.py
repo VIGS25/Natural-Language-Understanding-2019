@@ -12,7 +12,7 @@ from story_cloze import Dataset, UniversalEncoderDataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 from story_cloze.models import RNN
 
-SCRATCH_DIR = os.environ(["SCRATCH"])
+SCRATCH_DIR = os.environ["SCRATCH"]
 INPUT_DIR = os.path.join(SCRATCH_DIR, "data")
 
 def main():
