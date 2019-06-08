@@ -371,3 +371,107 @@ class UniversalEncoderDataset(object):
             shuffled = np.arange(n_samples)
         for idx in range(0, n_samples, batch_size):
             yield data[0][shuffled[idx: idx + batch_size]], data[1][shuffled[idx: idx + batch_size]]
+
+class ValDataset(object):
+    def __init__(self,
+                 encoder,
+                 input_dir: str = DATA_DIR,
+                 story_length: int = 4,
+                 preprocessors: List = None) -> None:
+
+        self.input_dir = input_dir
+        self.encoder = encoder
+        self.story_length = story_length
+
+        train_file = "stories.eval.csv"
+        test_file = "stories.test.csv"
+        self._load_train(train_file)
+        self._load_test(test_file)
+        self._encode_test()
+
+    def _load_train(self, train_file: str):
+        logger.info("Loading train data and labels.")
+        encoder_name = self.encoder.__class__.__name__
+        embed_name = "train_embeddings_" + encoder_name
+
+        embed_name = os.path.join(self.input_dir, embed_name)
+        
+        if self.encoder.__class__.__name__ != "SkipThoughts":
+            embed_name = "eval_embeddings_" + encoder_name + ".npy"
+            embed_name = os.path.join(self.input_dir, embed_name)
+
+            with open(embed_name, "rb") as f:
+                train_data = pickle.load(f)
+
+            train_story = train_data["data"].astype(np.float32)
+            train_endings1 = np.expand_dims(train_data["endings1"].astype(np.float32), axis=1)
+            train_endings2 = np.expand_dims(train_data["endings2"].astype(np.float32), axis=1)
+            target1 = (train_data["correct_end"] == 0)
+            target2 = train_data["correct_end"]
+
+        else:
+            self.train_df = pd.read_csv(os.path.join(self.input_dir, train_file))
+            correct_ending_idxs = self.train_df["AnswerRightEnding"] - 1
+            self.train_df.drop(["InputStoryid", "AnswerRightEnding"], axis=1, inplace=True)
+            train_cols = ["sentence_{}".format(i) for i in range(1, 5)] + ["ending1", "ending2"]
+            self.train_df.columns = train_cols
+
+            train_story = self.eval_df.values[:, :self.story_length]
+            train_endings1 = self.eval_df[:, self.story_length].reshape(-1, 1)
+            train_endings2 = self.eval_df[:, self.story_length + 1].reshape(-1, 1)
+            target1, target2 = (1 - correct_ending_idxs), correct_ending_idxs
+
+            del self.eval_df
+
+        train_data1 = np.concatenate([train_story, train_endings1], axis=1)
+        train_data2 = np.concatenate([train_story, train_endings2], axis=1)
+
+        self.train_data = np.concatenate([train_data1, train_data2], axis=0)
+        self.train_labels = np.concatenate([target1, target2], axis=0)
+
+        if encoder_name == "SkipThoughts":
+            self.train_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.train_data])
+
+        logger.info("Train data shape: {}".format(self.train_data.shape))
+        logger.info("Train labels shape: {}".format(self.train_labels.shape))
+
+    def _load_test(self, test_file: str):
+        logger.info("Loading test data and labels.")
+        self.test_data = pd.read_csv(os.path.join(self.input_dir, test_file)).values
+        logger.info("Test data shape: {}".format(self.test_data.shape))
+
+    def _encode_test(self):
+        logger.info("Encoding test data and labels.")
+        self.test_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.test_data])
+        logger.info("Encoded test data shape: {}".format(self.test_data.shape))
+
+    def batch_generator(self, mode: str = "train", batch_size: int = 64, shuffle:bool =True):
+        """Generates batches of data for training.
+
+        Parameters
+        ----------
+        mode: str, default train
+            Whether we want to generate batches for train, eval or test dataset
+        batch_size: int, default 64
+            Batch size used
+        shuffle: bool, default True
+            Whether to shuffle before generating batches
+        """
+        if mode == "train":
+            data = (self.train_data, self.train_labels)
+        elif mode == "test":
+            data = (self.test_data, None)
+
+        n_samples = data[0].shape[0]
+        if shuffle:
+            shuffled = np.random.permutation(n_samples)
+        else:
+            shuffled = np.arange(n_samples)
+
+        if mode == "train":
+            for idx in range(0, n_samples, batch_size):
+                yield data[0][shuffled[idx: idx + batch_size]], data[1][shuffled[idx: idx + batch_size]]
+
+        else:
+            for idx in range(0, n_samples, batch_size):
+                yield data[0][shuffled[idx: idx + batch_size]]
