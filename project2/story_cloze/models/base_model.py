@@ -86,7 +86,7 @@ class Model(object):
             self.tf_objects["Saver"] = tf.train.Saver(max_to_keep=self.max_checkpoints_to_keep)
 
             if self.restore_from is not None:
-                logger.info("Restoring variable values from. {}".format(restore_from))
+                logger.info("Restoring variable values from. {}".format(self.restore_from))
                 self._get_tf_object("Saver").restore(self._get_tf_object("Session"), self.restore_from)
             else:
                 logger.info("Initializing variable values.")
