@@ -437,8 +437,21 @@ class ValDataset(object):
 
     def _load_test(self, test_file: str):
         logger.info("Loading test data and labels.")
-        self.test_data = pd.read_csv(os.path.join(self.input_dir, test_file)).values
-        logger.info("Test data shape: {}".format(self.test_data.shape))
+
+        self.test_df = pd.read_csv(os.path.join(self.input_dir, test_file))
+        correct_ending_idxs = self.test_df["AnswerRightEnding"] - 1
+        self.test_df.drop(["InputStoryid", "AnswerRightEnding"], axis=1, inplace=True)
+        test_cols = ["sentence_{}".format(i) for i in range(1, 5)] + ["ending1", "ending2"]
+        self.test_df.columns = test_cols
+
+        self.test_data = self.eval_df.apply(lambda x: list([x[col] for col in test_cols]),axis=1)
+        self.test_correct_endings = correct_ending_idxs.values
+
+        logger.info("Test sentences shape: {}".format(self.test_data.shape))
+        logger.info("Test endings shape: {}".format(self.test_correct_endings.shape))
+        del self.test_df
+
+        assert len(self.test_data) == len(self.test_correct_endings), "All sentences should have endings."
 
     def _encode_test(self):
         logger.info("Encoding test data and labels.")
