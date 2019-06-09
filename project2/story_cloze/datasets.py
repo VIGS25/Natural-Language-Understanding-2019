@@ -396,7 +396,7 @@ class ValDataset(object):
 
         embed_name = os.path.join(self.input_dir, embed_name)
         
-        if self.encoder.__class__.__name__ != "SkipThoughts":
+        if encoder_name != "SkipThoughts":
             embed_name = "eval_embeddings_" + encoder_name + ".npy"
             embed_name = os.path.join(self.input_dir, embed_name)
 
@@ -444,7 +444,7 @@ class ValDataset(object):
         test_cols = ["sentence_{}".format(i) for i in range(1, 5)] + ["ending1", "ending2"]
         self.test_df.columns = test_cols
 
-        self.test_data = self.eval_df.apply(lambda x: list([x[col] for col in test_cols]),axis=1)
+        self.test_data = self.test_df.apply(lambda x: list([x[col] for col in test_cols]),axis=1)
         self.test_correct_endings = correct_ending_idxs.values
 
         logger.info("Test sentences shape: {}".format(self.test_data.shape))
@@ -455,8 +455,28 @@ class ValDataset(object):
 
     def _encode_test(self):
         logger.info("Encoding test data and labels.")
-        self.test_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.test_data])
-        logger.info("Encoded test data shape: {}".format(self.test_data.shape))
+        encoder_name = self.encoder.__class__.__name__
+        if encoder_name == "SkipThoughts":
+            self.test_data = np.array([self.encoder.encode(x).astype(np.float32) for x in self.test_data])
+        else:
+            embed_name = "test_embeddings_" + encoder_name + ".npy"
+            embed_name = os.path.join(self.input_dir, embed_name)
+
+            with open(embed_name, "rb") as f:
+                test_data = pickle.load(f)
+
+            test_story = test_data["data"].astype(np.float32)
+            test_endings1 = np.expand_dims(test_data["endings1"].astype(np.float32), axis=1)
+            test_endings2 = np.expand_dims(test_data["endings2"].astype(np.float32), axis=1)
+            target1 = (test_data["correct_end"] == 0)
+            target2 = test_data["correct_end"]
+
+            self.eval_data = np.concatenate([test_story, test_endings1, test_endings2], axis=1)
+            self.eval_correct_endings = test_data["correct_end"]
+    
+        logger.info("Test sentences shape: {}".format(self.eval_data.shape))
+        logger.info("Test endings shape: {}".format(self.eval_correct_endings.shape))
+
 
     def batch_generator(self, mode: str = "train", batch_size: int = 64, shuffle:bool =True):
         """Generates batches of data for training.
@@ -472,19 +492,15 @@ class ValDataset(object):
         """
         if mode == "train":
             data = (self.train_data, self.train_labels)
+        elif mode == "eval":
+            data = (self.eval_data, self.eval_correct_endings)
         elif mode == "test":
-            data = (self.test_data, None)
+            data = (self.test_data, self.test_correct_endings)
 
         n_samples = data[0].shape[0]
         if shuffle:
             shuffled = np.random.permutation(n_samples)
         else:
             shuffled = np.arange(n_samples)
-
-        if mode == "train":
-            for idx in range(0, n_samples, batch_size):
-                yield data[0][shuffled[idx: idx + batch_size]], data[1][shuffled[idx: idx + batch_size]]
-
-        else:
-            for idx in range(0, n_samples, batch_size):
-                yield data[0][shuffled[idx: idx + batch_size]]
+        for idx in range(0, n_samples, batch_size):
+            yield data[0][shuffled[idx: idx + batch_size]], data[1][shuffled[idx: idx + batch_size]]

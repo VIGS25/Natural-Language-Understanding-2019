@@ -70,13 +70,14 @@ class SkipThoughts(SentenceEncoder):
 
 class UniversalEncoder(SentenceEncoder):
     """Pre-built implementation of Universal Sentence Encoder"""
-    def __init__(self, hub_id = "/2"):
+    def __init__(self, hub_id = "/2", load=True):
         import tensorflow_hub as hub
         base_url = "https://tfhub.dev/google/universal-sentence-encoder%s"
         assert hub_id in ["/2", "-large/3"]
-        self.encoder = hub.Module(base_url % hub_id)
-        self.session = tf.Session()
-        self.session.run([tf.global_variables_initializer(), tf.tables_initializer()])
+        if load:
+            self.encoder = hub.Module(base_url % hub_id)
+            self.session = tf.Session()
+            self.session.run([tf.global_variables_initializer(), tf.tables_initializer()])
 
     def encode(self, sentence: List[str]) -> np.ndarray:
         """Returns encoding of a list of sentences."""
