@@ -10,7 +10,7 @@ import logging
 
 from story_cloze import Dataset, UniversalEncoderDataset, ValDataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
-from story_cloze.models import RNN
+from story_cloze.models import BiRNN
 
 SCRATCH_DIR = os.environ["SCRATCH"]
 INPUT_DIR = os.path.join(SCRATCH_DIR, "data")
@@ -42,7 +42,7 @@ def main():
 
     # Training specific
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate used.")
-    parser.add_argument("--num_epochs", type=int, default=25, help="Number of epochs for training.")
+    parser.add_argument("--num_epochs", type=int, default=50, help="Number of epochs for training.")
     parser.add_argument("--log_every", type=int, default=100, help="Log stats every.")
     parser.add_argument("--print_every", type=int, default=100, help="Print stats every.")
     parser.add_argument("--eval_every", type=int, default=100, help="Eval every.")
@@ -50,13 +50,15 @@ def main():
 
     args = parser.parse_args()
     att = "None" if not args.use_attn else args.attn_type
-    exp_name = f'Roemelle_RNN_{att}_{args.rnn_type}_{dt.now().strftime("%d-%m-%Y--%H-%M-%S")}'
+    exp_name = f'Roemelle_BiRNN_{att}_{args.rnn_type}_{dt.now().strftime("%d-%m-%Y--%H-%M-%S")}'
 
     log_params = {'level': logging.DEBUG, 'format': "%(asctime)s - [%(levelname)s] %(message)s"}
     if args.flush_log:
         log_params.update({'filename': os.path.join("logs", exp_name), 'filemode': 'a'})
+
     logging.basicConfig(**log_params)
     logger = logging.getLogger(__name__)
+
 
     if args.encoder_type == "skipthoughts":
         embedding_dir = os.path.join(args.input_dir, "embeddings", "skip_thoughts")
@@ -85,7 +87,7 @@ def main():
     dataset = ValDataset(encoder=encoder, story_length=args.story_length, input_dir=args.input_dir)
 
     logger.info("Building the model...")
-    model = RNN(embedding_dim=embedding_dim,
+    model = BiRNN(embedding_dim=embedding_dim,
                 rnn_type=args.rnn_type,
                 learning_rate=args.learning_rate,
                 num_hidden_units=args.num_hidden_units,
