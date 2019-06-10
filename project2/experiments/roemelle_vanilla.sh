@@ -1,6 +1,7 @@
 #!/bin/bash
 
-bsub -n 20 -N -W 10:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m train_rnn \
+FILE="story_cloze.train.train_rnn"
+bsub -n 20 -N -W 10:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m $FILE \
     --batch_size 100 \
     --rnn_type vanilla \
     --num_hidden_units 1000 \

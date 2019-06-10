@@ -1,12 +1,11 @@
 #!/bin/bash
 
-module load python_gpu/3.6.4 cuda/10.0.130 cudnn/7.2
-
-bsub -n 20 -N -W 20:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m train_birnn \
+FILE="story_cloze.train.train_ffn"
+bsub -n 20 -N -W 20:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m $FILE \
     --max_checkpoints_to_keep 10 \
-    --batch_size 100 \
+    --batch_size 64 \
     --rnn_type lstm \
-    --num_hidden_units 1000 \
+    --input_mode full_context \
     --encoder_type skipthoughts \
     --embed_mode both \
     --clip_norm 10 \
@@ -17,4 +16,3 @@ bsub -n 20 -N -W 20:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m train_bi
     --log_every 1000 \
     --print_every 1000 \
     --eval_every 1000
-

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-FILE="story_cloze.train.train_rnn"
+FILE="story_cloze.train.train_birnn"
 bsub -n 20 -N -W 10:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m $FILE \
     --batch_size 100 \
     --rnn_type gru \
@@ -10,7 +10,6 @@ bsub -n 20 -N -W 10:00 -R "rusage[mem=10240, ngpus_excl_p=1]" python -m $FILE \
     --clip_norm 10 \
     --story_length 4 \
     --n_random 6 \
-    --use_attn \
     --learning_rate 1e-3 \
     --num_epochs 20 \
     --log_every 1000 \
