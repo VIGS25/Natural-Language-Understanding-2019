@@ -1,6 +1,9 @@
+flake8
+matplotlib
+scikit-learn
+nltk
 numpy
 pandas
-nltk
-scikit-learn
 tensorflow-gpu==1.13.1
+tensorboard==1.7.0
 yapf
