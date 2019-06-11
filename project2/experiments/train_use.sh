@@ -1,4 +1,4 @@
-alias submit="bsub -n 4 -W 24:00 -R \"rusage[mem=18000, ngpus_excl_p=1]\" python"
+alias submit="bsub -n 4 -W 24:00 -R \"rusage[mem=18000, ngpus_excl_p=1]\" python -m"
 mkdir -p logs/
 
 ENCODER="--encoder_type universal"
