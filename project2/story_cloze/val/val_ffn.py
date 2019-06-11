@@ -85,6 +85,7 @@ def main():
     logger.info("Building the model...")
     model = FFN(embedding_dim=embedding_dim,
                 rnn_type=args.rnn_type,
+                input_mode=args.input_mode,
                 learning_rate=args.learning_rate,
                 num_hidden_units=embedding_dim,
                 n_story_sentences=args.story_length,

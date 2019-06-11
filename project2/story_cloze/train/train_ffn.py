@@ -94,6 +94,7 @@ def main():
     model = FFN(embedding_dim=embedding_dim,
                 rnn_type=args.rnn_type,
                 learning_rate=args.learning_rate,
+                input_mode=args.input_mode,
                 num_hidden_units=embedding_dim,
                 n_story_sentences=args.story_length,
                 clip_norm=args.clip_norm,

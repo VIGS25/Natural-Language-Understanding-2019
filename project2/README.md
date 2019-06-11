@@ -162,3 +162,20 @@ python -m restore --mode predict --restore_from <PATH_TO_CHECKPOINT> --model_nam
 ```
 
 The predictions are saved to the same location the model was restored from.
+
+## Generating Final Predictions
+
+To generate our final predictions, first run:
+
+```
+python -m story_cloze.generate_SkipThoughts --mode test --file stories.test.csv
+```
+
+Then, download the Best-Models file from [here](https://polybox.ethz.ch/index.php/s/3h8DX79ZUyCO9gn)
+and extract it to your root folder (where `generate_final_predictions.py`) is present.
+
+Now run,
+
+```
+python -m generate_final_predictions
+```
