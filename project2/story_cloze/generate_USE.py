@@ -1,5 +1,5 @@
 """
-Script to generate Universal Sentence Encoders for training and eval datasets. 
+Script to generate Universal Sentence Encoders for training and eval datasets.
 """
 import numpy as np
 import logging
@@ -14,4 +14,3 @@ logging.basicConfig(filename="gen-logs/%s.log" % datetime.datetime.now().strftim
 logger = logging.getLogger(__name__)
 
 dataset = UniversalEncoderDataset(input_dir=os.path.join(os.environ['SCRATCH'], "data"), encode_only=True, encoder=UniversalEncoder())
-
