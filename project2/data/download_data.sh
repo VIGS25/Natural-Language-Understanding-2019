@@ -5,6 +5,7 @@ cd $SCRATCH/data
 wget https://polybox.ethz.ch/index.php/s/l2wM4RIyI3pD7Tl/download -O stories.train.csv
 wget https://polybox.ethz.ch/index.php/s/02IVLdBAgVcsJAx/download -O stories.eval.csv
 wget https://polybox.ethz.ch/index.php/s/h2gp3FpS3N7Xgiq/download -O stories.spring2016.csv
+wget https://polybox.ethz.ch/index.php/s/C9sYaIebnJnHlqi/download -O stories.test.csv
 
 mkdir -p $SCRATCH/data/embeddings/skip_thoughts/
 cd $SCRATCH/data/embeddings/skip_thoughts
