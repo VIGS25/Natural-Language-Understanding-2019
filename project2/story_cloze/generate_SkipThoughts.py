@@ -10,7 +10,7 @@ from story_cloze.embeddings import SkipThoughts, UniversalEncoder
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-DATA_DIR = os.path.join("./", "data")
+DATA_DIR = os.path.join(os.environ.get("SCRATCH", "./"), "data")
 
 def main():
 
@@ -25,7 +25,7 @@ def main():
 
     file = os.path.join(args.input_dir, args.file)
 
-    filename = args.mode + "_embeddings_SkipThoughts" + args.embed_mode + ".npy"
+    filename = args.mode + "_embeddings_SkipThoughts_" + args.embed_mode + ".npy"
     embedding_dir = os.path.join(args.input_dir, "embeddings", "skip_thoughts")
     if args.embed_mode == "uni" or args.embed_mode == "bi":
         embedding_dim = 2400
@@ -43,6 +43,7 @@ def main():
     data = df.apply(lambda x: list([x[col] for col in cols]),axis=1)
     logger.info("Encoding the data.")
     encoded_data = np.array([encoder.encode(x).astype(np.float32) for x in data])
+    logger.info("Data Encoded, Shape: {}".format(encoded_data.shape))
 
     logger.info("Saving embeddings for given file to {}".format(filename))
     filename = os.path.join(args.input_dir, filename)
