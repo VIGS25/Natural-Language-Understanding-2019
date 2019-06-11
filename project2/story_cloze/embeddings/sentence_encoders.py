@@ -20,13 +20,14 @@ class SkipThoughts(SentenceEncoder):
     """Implementation of SkipThoughts sentence encoder."""
     embed_dir = os.path.abspath("data/embeddings/skip_thoughts")
 
-    def __init__(self, mode: str = "bi", embed_dir: str = None) -> None:
+    def __init__(self, mode: str = "bi", embed_dir: str = None, load: bool = True) -> None:
         self.mode = mode
         self.encoder = EncoderManager()
         if embed_dir is not None:
             self.embed_dir = embed_dir
         self.vocab_file = os.path.join(self.embed_dir, "vocab.txt")
-        self.load_model()
+        if load:
+            self.load_model()
         super(SkipThoughts, self).__init__()
 
     def get_bi_metadata(self) -> Tuple[str, str, str]:

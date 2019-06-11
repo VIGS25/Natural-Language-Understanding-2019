@@ -10,7 +10,7 @@ import logging
 
 from story_cloze import Dataset, UniversalEncoderDataset, ValDataset
 from story_cloze.embeddings import SkipThoughts, UniversalEncoder
-from story_cloze.models import BiRNN
+from story_cloze.models import RNN
 
 SCRATCH_DIR = os.environ["SCRATCH"]
 INPUT_DIR = os.path.join(SCRATCH_DIR, "data")
@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--max_checkpoints_to_keep", default=5, type=int, help="How many checkpoints to keep.")
 
     # Setup specific
-    parser.add_argument("--batch_size", default=64, type=int, help="Batch Size used.")
+    parser.add_argument("--batch_size", default=100, type=int, help="Batch Size used.")
     parser.add_argument("--rnn_type", default="gru", help="Type of RNN used.")
     parser.add_argument("--num_hidden_units", default=1000, type=int, help="Number of hidden units in RNN Cell")
     parser.add_argument("--encoder_type", default="skipthoughts", choices=["skipthoughts", "universal"], help="Encoder type")
@@ -42,7 +42,7 @@ def main():
 
     # Training specific
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate used.")
-    parser.add_argument("--num_epochs", type=int, default=50, help="Number of epochs for training.")
+    parser.add_argument("--num_epochs", type=int, default=30, help="Number of epochs for training.")
     parser.add_argument("--log_every", type=int, default=100, help="Log stats every.")
     parser.add_argument("--print_every", type=int, default=100, help="Print stats every.")
     parser.add_argument("--eval_every", type=int, default=100, help="Eval every.")
@@ -50,15 +50,13 @@ def main():
 
     args = parser.parse_args()
     att = "None" if not args.use_attn else args.attn_type
-    exp_name = f'Roemelle_BiRNN_{att}_{args.rnn_type}_{dt.now().strftime("%d-%m-%Y--%H-%M-%S")}'
+    exp_name = f'Roemelle_RNN_{att}_{args.rnn_type}_{dt.now().strftime("%d-%m-%Y--%H-%M-%S")}'
 
     log_params = {'level': logging.DEBUG, 'format': "%(asctime)s - [%(levelname)s] %(message)s"}
     if args.flush_log:
         log_params.update({'filename': os.path.join("logs", exp_name), 'filemode': 'a'})
-
     logging.basicConfig(**log_params)
     logger = logging.getLogger(__name__)
-
 
     if args.encoder_type == "skipthoughts":
         embedding_dir = os.path.join(args.input_dir, "embeddings", "skip_thoughts")
@@ -66,7 +64,7 @@ def main():
             embedding_dim = 2400
         else:
             embedding_dim = 4800
-        encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode)
+        encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode, load=False)
     elif args.encoder_type == "universal":
         encoder = UniversalEncoder(load=False)
         embedding_dim = 512
@@ -87,7 +85,7 @@ def main():
     dataset = ValDataset(encoder=encoder, story_length=args.story_length, input_dir=args.input_dir)
 
     logger.info("Building the model...")
-    model = BiRNN(embedding_dim=embedding_dim,
+    model = RNN(embedding_dim=embedding_dim,
                 rnn_type=args.rnn_type,
                 learning_rate=args.learning_rate,
                 num_hidden_units=args.num_hidden_units,

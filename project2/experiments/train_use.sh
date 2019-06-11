@@ -7,6 +7,7 @@ for RNN_TYPE in "gru" "lstm"
 do
 	submit story_cloze.train.train_rnn.py $ENCODER --rnn_type $RNN_TYPE &
 	submit story_cloze.train.train_ffn.py $ENCODER --rnn_type $RNN_TYPE &
+	submit story_cloze.train.train_ffn.py $ENCODER --rnn_type $RNN_TYPE & --input_mode last_sentence
 	submit story_cloze.train.train_birnn.py $ENCODER --rnn_type $RNN_TYPE &
 
 	for ATT_TYPE in "multiplicative" "additive"
