@@ -24,6 +24,8 @@
 * `Makefile` - Contains definitions for various tasks.
 * `README.md` - This manual
 * `requirements.txt` - Required Python packages.
+* `final_predictions.csv` - Final Predictions
+* `generate_final_predictions.csv` - Generate the Final Predictions
 
 ## Set up
 
@@ -171,8 +173,14 @@ To generate our final predictions, first run:
 python -m story_cloze.generate_SkipThoughts --mode test --file stories.test.csv
 ```
 
-Then, download the Best-Models file from [here](https://polybox.ethz.ch/index.php/s/3h8DX79ZUyCO9gn)
-and extract it to your root folder (where `generate_final_predictions.py`) is present.
+Then, download the Best-Models file from [here](https://polybox.ethz.ch/index.php/s/3h8DX79ZUyCO9gn) and extract it to your root folder (where `generate_final_predictions.py`) is present.
+
+After extraction the structure should look something like:
+* Best-Models\
+    * FFN-Last-Sentence\
+    * Roemmele-BiGRU\
+    * Roemmele-BiGRU-Add-Attn\
+*generate_final_predictions.py`
 
 Now run,
 
