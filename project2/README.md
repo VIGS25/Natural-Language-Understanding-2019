@@ -16,9 +16,10 @@
   * `train/` - Contains the train scripts for each of the models
   * `datasets.py` - Functionality for loading and encoding and batching datasets
   * `attention.py` - Implementation of the attention modules
-  * `generate_SkipThoughts.py` - Generate and save SkipThoughts embeddings for any dataset. The SkipThoughts embeddings for the original training set are saved
-      for the first time when running any of the train scripts. For the other times, it is loaded. (This takes ~ 7hrs though)
-  * `generate_USE.py` - Generate the save Universal Sentence Encoder (USE) embeddings for train, eval and original Story Cloze test dataset. Since we don't use USE for predictions, there is no script to generate USE embeddings for a custom file.
+  * `generate_SkipThoughts.py` - Generate and save SkipThoughts embeddings for any dataset. The SkipThoughts embeddings for the original training set are generated
+      the first time when running any of the train scripts. For the other times, it is loaded. (This takes ~ 7hrs though)
+  * `generate_USE.py` - Generate the save Universal Sentence Encoder (USE) embeddings for train, eval and original Story Cloze test dataset. 
+     Since we don't use USE for predictions, there is no script to generate USE embeddings for a custom file.
 * `experiments/` - Contains bash scripts for each of the experiments in the report.
 * `Makefile` - Contains definitions for various tasks.
 * `README.md` - This manual
@@ -87,7 +88,7 @@ make srini_ffn_ls
 ```
 
 The above instructions are for running experiments on the original training set.
-Since we use validation data based exepriments only for comparison, all experiments are pooled into a single script.
+Since we use validation data based experiments only for comparison, all these experiments are pooled into a single script.
 To run experiments using validation set, use the command:
 
 ```
@@ -124,11 +125,11 @@ The restore script assumes two things:
 1) An lsf file is present in the directory you restore from. This is used for
 getting the arguments to load the model.
 
-2) The embeddings of the file to evaluate or predict are saved for in `$SCRATCH/data`.
+2) The embeddings of the file to evaluate or predict are saved in `$SCRATCH/data`.
 For evaluation, this would take the form of `eval_embeddings_SkipThoughts_<ENCODER_MODE>.npy`,
 while for prediction, this would take the form of `test_embeddings_SkipThoughts_<ENCODER_MODE>.npy`
 
-where `<ENCODER_MODE>` is in `{uni, bi, both}`. `both` used by default.
+where `<ENCODER_MODE>` is in `{uni, bi, both}`, `both` used by default.
 
 To save embeddings, use the command:
 
