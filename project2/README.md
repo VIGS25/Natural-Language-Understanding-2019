@@ -31,8 +31,9 @@ model checkpoints and logs (~15GB).
     ```
     make requirements
     ```
+* model checkpoints and logs are saved under $SCRATCH/outputs/EXP_NAME
 
-## Experiments
+## Running Experiments
 
 ### Roemmele et al.
 
@@ -82,3 +83,28 @@ where `RNN_CELL` is one of `{gru, lstm}`
 ```
 make srini_ffn_ls
 ```
+
+## Saving and Restoring models
+
+Models are currently saved whenever a new best validation score is obtained. 
+How often validation is performed is  controlled by the `eval_every` argument, 
+which can be changed in the bash script corresponding to the `make` command.
+
+To restore a model for evaluation on a different dataset, please use:
+
+```
+python -m restore --mode evaluate --restore_from <PATH_TO_CHECKPOINT> --model_name <MODEL_NAME> --test_file <FILENAME>
+```
+Currently, the script expects an lsf file to be present in the directory you restore from. 
+This is used for getting the arguments to load the model.
+
+To generate predictions, please use:
+
+```
+python -m restore --mode predict --restore_from <PATH_TO_CHECKPOINT> --model_name <MODEL_NAME> --test_file <FILENAME>
+```
+
+The predictions are saved to the same location the model was restored from.
+
+
+
