@@ -14,14 +14,15 @@ from story_cloze.models import RNN
 
 SCRATCH_DIR = os.environ["SCRATCH"]
 INPUT_DIR = os.path.join(SCRATCH_DIR, "data")
+OUT_DIR = os.path.join(SCRATCH_DIR, "outputs")
 
 def main():
     parser = argparse.ArgumentParser()
 
     # I/O
     parser.add_argument("--input_dir", default=INPUT_DIR, help="Directory where data is present.")
-    parser.add_argument("--log_dir", default=SCRATCH_DIR, help="Where to save Tensorboard-Logs to")
-    parser.add_argument("--model_dir", default=SCRATCH_DIR, help="Where to save models to.")
+    parser.add_argument("--log_dir", default=OUT_DIR, help="Where to save Tensorboard-Logs to")
+    parser.add_argument("--model_dir", default=OUT_DIR, help="Where to save models to.")
     parser.add_argument("--restore_from", default=None, help="Where to restore pretrained model from.")
     parser.add_argument("--max_checkpoints_to_keep", default=5, type=int, help="How many checkpoints to keep.")
 
