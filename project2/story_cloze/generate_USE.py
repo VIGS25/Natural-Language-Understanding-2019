@@ -13,4 +13,4 @@ logFormatter = "%(asctime)s - [%(levelname)s] %(message)s"
 logging.basicConfig(filename="gen-logs/%s.log" % datetime.datetime.now().strftime('%d-%m--%H-%M'), filemode='a', format=logFormatter, level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-dataset = UniversalEncoderDataset(input_dir=os.path.join(os.environ['SCRATCH'], "data"), encode_only=True, encoder=UniversalEncoder())
+dataset = UniversalEncoderDataset(input_dir=os.path.join(os.environ.get('SCRATCH', "./"), "data"), encode_only=True, encoder=UniversalEncoder())

@@ -46,7 +46,7 @@ srini_ffn_fc_lstm:
 srini_ffn_ls:
 	./experiments/srini_ffn_ls.sh
 
-universal_all:
+universal_all_train:
 	./experiments/generate_embeddings_use.sh
 	./experiments/train_use.sh
 
