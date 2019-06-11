@@ -20,7 +20,7 @@ class Dataset:
     train_small_file = "stories.train.small.csv"
     eval_small_file = "stories.eval.small.csv"
     eval_file = "stories.eval.csv"
-    test_file = "stories.test.csv"
+    test_file = "stories.spring2016.csv"
 
     def __init__(self,
                  encoder,
@@ -201,7 +201,7 @@ class UniversalEncoderDataset(object):
     train_small_file = "stories.train.small.csv"
     eval_small_file = "stories.eval.small.csv"
     eval_file = "stories.eval.csv"
-    test_file = "stories.test.csv"
+    test_file = "stories.spring2016.csv"
 
     def __init__(self,
                  input_dir: str = DATA_DIR,
@@ -309,7 +309,7 @@ class UniversalEncoderDataset(object):
         encoder_name = "UniversalEncoder"
         embed_name = "eval_" if mode == "train" else "test_"
         embed_name += "embeddings_" + encoder_name + ".npy"
-        
+
         embed_name = os.path.join(self.input_dir, embed_name)
 
         self.eval_df = pd.read_csv(os.path.join(self.input_dir, eval_file))
@@ -358,14 +358,14 @@ class UniversalEncoderDataset(object):
         logger.info("After adding negative endings..")
         logger.info("Train dataset shape: {}".format(self.train_data.shape))
         logger.info("Train labels shape: {}".format(self.train_labels.shape))
-    
+
     def _encode_train(self):
         logger.info("Encoding train sentences...")
         encoder_name = self.encoder.__class__.__name__
         dirname = os.path.join(self.input_dir, encoder_name)
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
-        train_data  = self.encoder.encode(self.train_data[:, :4].flatten()).reshape(-1, 4, 512) 
+        train_data  = self.encoder.encode(self.train_data[:, :4].flatten()).reshape(-1, 4, 512)
         train_endings = self.encoder.encode(self.train_data[:, 4])
         filename = os.path.join(dirname, "train_embeddings_UniversalEncoder.npy")
         logger.info("Embeddings shape: {}".format(train_data.shape))
@@ -437,7 +437,7 @@ class ValDataset(object):
         self.story_length = story_length
 
         train_file = "stories.eval.csv"
-        test_file = "stories.test.csv"
+        test_file = "stories.spring2016.csv"
         self._load_train(train_file)
         self._load_test(test_file)
         self._encode_test()
@@ -448,7 +448,7 @@ class ValDataset(object):
         embed_name = "train_embeddings_" + encoder_name
 
         embed_name = os.path.join(self.input_dir, embed_name)
-        
+
         if encoder_name != "SkipThoughts":
             embed_name = "eval_embeddings_" + encoder_name + ".npy"
             embed_name = os.path.join(self.input_dir, embed_name)
@@ -522,7 +522,7 @@ class ValDataset(object):
 
             self.eval_data = np.concatenate([test_story, test_endings1, test_endings2], axis=1)
             self.eval_correct_endings = test_data["correct_end"]
-    
+
         logger.info("Test sentences shape: {}".format(self.eval_data.shape))
         logger.info("Test endings shape: {}".format(self.eval_correct_endings.shape))
 
