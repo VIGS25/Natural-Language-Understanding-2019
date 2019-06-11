@@ -1,41 +1,41 @@
-roemelle_gru:
-	./experiments/roemelle_gru.sh
+roemmele_gru:
+	./experiments/roemmele_gru.sh
 
-roemelle_gru_add_attn:
-	./experiments/roemelle_gru_add_attn.sh
+roemmele_gru_add_attn:
+	./experiments/roemmele_gru_add_attn.sh
 
-roemelle_gru_mult_attn:
-	./experiments/roemelle_gru_mult_attn.sh
+roemmele_gru_mult_attn:
+	./experiments/roemmele_gru_mult_attn.sh
 
-roemelle_bigru:
-	./experiments/roemelle_bigru.sh
+roemmele_bigru:
+	./experiments/roemmele_bigru.sh
 
-roemelle_bigru_add_attn:
-	./experiments/roemelle_bigru_add_attn.sh
+roemmele_bigru_add_attn:
+	./experiments/roemmele_bigru_add_attn.sh
 
-roemelle_bigru_mult_attn:
-	./experiments/roemelle_bigru_mult_attn.sh
+roemmele_bigru_mult_attn:
+	./experiments/roemmele_bigru_mult_attn.sh
 
-roemelle_lstm:
-	./experiments/roemelle_lstm.sh
+roemmele_lstm:
+	./experiments/roemmele_lstm.sh
 
-roemelle_lstm_add_attn:
-	./experiments/roemelle_lstm_add_attn.sh
+roemmele_lstm_add_attn:
+	./experiments/roemmele_lstm_add_attn.sh
 
-roemelle_lstm_mult_attn:
-	./experiments/roemelle_lstm_mult_attn.sh
+roemmele_lstm_mult_attn:
+	./experiments/roemmele_lstm_mult_attn.sh
 
-roemelle_bilstm:
-	./experiments/roemelle_bilstm.sh
+roemmele_bilstm:
+	./experiments/roemmele_bilstm.sh
 
-roemelle_bilstm_add_attn:
-	./experiments/roemelle_bilstm_add_attn.sh
+roemmele_bilstm_add_attn:
+	./experiments/roemmele_bilstm_add_attn.sh
 
-roemelle_bilstm_mult_attn:
-	./experiments/roemelle_bilstm_mult_attn.sh
+roemmele_bilstm_mult_attn:
+	./experiments/roemmele_bilstm_mult_attn.sh
 
-roemelle_vanilla:
-	./experiments/roemelle_vanilla.sh
+roemmele_vanilla:
+	./experiments/roemmele_vanilla.sh
 
 srini_ffn_fc_gru:
 	./experiments/srini_ffn_fc_gru.sh
