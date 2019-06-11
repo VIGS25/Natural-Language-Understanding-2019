@@ -34,7 +34,7 @@ model checkpoints and logs (~15GB).
     ```
     make requirements
     ```
-* model checkpoints and logs are saved under $SCRATCH/outputs/EXP_NAME
+* model checkpoints and logs are saved under `$SCRATCH/outputs/EXP_NAME`
 
 ## SkipThoughts Based Experiments
 
