@@ -180,7 +180,7 @@ After extraction the structure should look something like:
     * FFN-Last-Sentence\
     * Roemmele-BiGRU\
     * Roemmele-BiGRU-Add-Attn\
-*generate_final_predictions.py`
+* `generate_final_predictions.py`
 
 Now run,
 
