@@ -46,16 +46,19 @@ srini_ffn_fc_lstm:
 srini_ffn_ls:
 	./experiments/srini_ffn_ls.sh
 
-universal_all_train:
+generate_embeddings_st:
+	./experiments/generate_embeddings_st.sh
+
+generate_embeddings_use:
 	./experiments/generate_embeddings_use.sh
+
+universal_all_train:
 	./experiments/train_use.sh
 
 universal_all_val:
-	./experiments/generate_embeddings_use.sh
 	./experiments/val_use.sh
 
 skipthoughts_all_val:
-	./experiments/generate_embeddings_st.sh
 	./experiments/val_st.sh
 
 requirements:

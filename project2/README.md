@@ -18,7 +18,7 @@
   * `attention.py` - Implementation of the attention modules
   * `generate_SkipThoughts.py` - Generate and save SkipThoughts embeddings for any dataset (preferably the validation or any test set). The SkipThoughts embeddings for the original training set are generated
       the first time when running any of the train scripts. For the other times, it is loaded. (This takes ~ 7hrs though)
-  * `generate_USE.py` - Generate and save Universal Sentence Encoder (USE) embeddings for train, validation and original Story Cloze test dataset. 
+  * `generate_USE.py` - Generate and save Universal Sentence Encoder (USE) embeddings for train, validation and original Story Cloze test dataset.
      Since we don't use USE for predictions, there is no script to generate USE embeddings for a custom file.
 * `experiments/` - Contains bash scripts for each of the experiments in the report.
 * `Makefile` - Contains definitions for various tasks.
@@ -88,7 +88,12 @@ make srini_ffn_ls
 
 The above instructions are for running experiments on the original training set.
 Since we use validation data based experiments only for comparison, all these experiments are pooled into a single script.
-To run experiments using validation set, use the command:
+To run experiments using validation set, first use the following command if the embeddings are not saved:
+
+```
+make generate_embeddings_st
+```
+Once the job above is finished (about 5 mins), run:
 
 ```
 make skipthoughts_all_val
@@ -99,7 +104,15 @@ make skipthoughts_all_val
 Since the focus of our work is SkipThoughts, and the results they achieve are significantly better than USE,
 we pool all experiments using USE into a single bash script.
 
-To run all the experiments on the training set using USE, use the command:
+To generate all embeddings, first run the command:
+
+```
+make generate_embeddings_use
+```
+
+and wait for the job to finish.
+
+Then, to run all the experiments on the training set using USE, use the command:
 
 ```
 make universal_all_train
