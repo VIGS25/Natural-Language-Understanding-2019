@@ -1,0 +1,194 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2017
+%
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2017}
+
+\PassOptionsToPackage{square,numbers,comma,sort}{natbib}
+\bibliographystyle{plain}
+
+\usepackage[final]{nips_2017}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{multirow}
+\usepackage{caption}
+
+% Choose a title for your submission
+\title{NLU Project 2: Story Cloze Test}
+
+
+\author{
+  Akmaral Yessenalina$^\ast$\\
+  ETH Zurich\\
+  \texttt{yakmaral@ethz.ch}\\
+  \And
+  Vignesh Ram Somnath$^\ast$\\
+  ETH Zurich\\
+  \texttt{vsomnath@ethz.ch}\\
+  \And
+  Ritu Sriram$^\ast$\\
+  ETH Zurich\\
+  \texttt{rsriram@ethz.ch}\\
+  \And
+  Meet Vora\thanks{All authors contributed equally.}\\
+  ETH Zurich\\
+  \texttt{voram@ethz.ch}\\
+}
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+% We do not require you to write an abstract. Still, if you feel like it, please do so.
+%\begin{abstract}
+%\end{abstract}
+
+\section{Introduction}
+Building systems that can understand stories or compose meaningful stories has been a long standing ambition in natural language understanding. Story understanding involves learning meaningful associations and commonsense knowledge from the underlying narrative structure. One such framework that attempts to evaluate story comprehension is that of Story Cloze Test \citep{Mostafazadeh2016AStories}. The task involves associating a 4 sentence story with its correct ending. The training and validation phases in the Story Cloze test are structured differently -- the training set consists of the 4 sentence story and the correct ending while the validation set consists of a 4 sentence story with 2 possible choices for the ending. The model has to then choose the correct ending, i.e. the more logical ending out of the two choices. The intent behind the task is to evaluate how well the model learns the semantic associations between the sentences in the story and the endings to choose the correct one. 
+
+One of the major challenges in this task is the lack of negative endings in the training set. Attempts have been made to generate negative endings using generative models (GANs \citep{Wang2017ConditionalComprehension} or language modeling \citep{Roemmele2017AnTest}) or employing different sampling strategies on the training set endings (Roemmele\, et\, al.\ \citep{Roemmele2017AnTest}). Despite these attempts, there exists a distributional difference between the (augmented) training and the validation sets, explaining results of previous research (\citep{Srinivasan2018ATest},\citep{chaturvedi-etal-2017-story}) that achieve higher accuracies by training on the validation set, even though the training set is much larger. Humans, though are able to achieve 100\% accuracy on this task, indicating it is perfectly solvable despite the above issues.
+ 
+In this work, we sample negative endings from other endings in the training set. We investigate different associative strategies between the story context and the endings and replicate models presented in Roemmele et al \citep{Roemmele2017AnTest}. and Srinivasan et al \citep{Srinivasan2018ATest}. We also explore various extensions to their models, thus managing to increase the accuracy.
+
+\section{Methodology}
+% Method
+Our work largely follows the methods described in Roemmele et. al \citep{Roemmele2017AnTest}, but we also investigate a different association strategy, as mentioned in Srinivasan et. al \citep{Srinivasan2018ATest}. Both strategies build discriminative classifiers that use the context and ending to output a probability of how plausible the ending is. The methods based on Roemmele\,et\,al.\ \citep{Roemmele2017AnTest} encode the story and ending together into a single vector used for classification, while the methods based on Srinivasan et al encode the story separately and then learn an association with the ending for classification. Unlike Srinivasan\,et\,al.\ \citep{Srinivasan2018ATest}, where the authors use the validation set for training, our work uses the training set. To compensate for the lack of negative endings during training, we sample them randomly from other endings in the training set. However, purely for the purpose of comparison, we also train all models on the validation set. 
+
+% Embeddings
+Our models utilize the BookCorpus dataset \citep{Zhu2015AligningBooks} for embedding the story and endings using a pretrained model. In particular, we use the SkipThoughts \citep{Kiros2015Skip-ThoughtVectors}\footnote{We use the SkipThought embeddings from \url{https://github.com/tensorflow/models/tree/master/research/skip_thoughts}} sentence embeddings with a focus on the concatenated embeddings from uni-skip and bi-skip SkipThought models, shown to have achieved better results than using either embedding. We refer to these embeddings as SkipThoughts-both or STB henceforth. We also compare the performance of SkipThoughts to the Universal Sentence Encoder embeddings from Cer\,et\,al.\ \citep{2018arXiv180311175C} \footnote{The pretrained model is available in TensorFlow Hub}. These embeddings are referred to as USE henceforth.
+
+% Steps for validation data here.
+During inference time, we make a forward pass with the story and each of the two possible endings. For models based on Roemmele\,et\ al.\ \citep{Roemmele2017AnTest}, the correct ending is chosen as the one with higher probability. For those based on Srinivasan\,et\,al.\ \citep{Srinivasan2018ATest}, we look at the probability of being right for both endings, and choose the ending with the higher probability. For models trained on the training set, we report the accuracies on the validation and the Story Cloze test set. For the  ones trained on the validation set, only the accuracies on the Story Cloze test set are reported. Models trained on the validation set are not considered for final predictions. We use an ensemble of 3 models with the highest validation accuracy, and adopt a majority voting scheme.
+
+\section{Model}
+\subsection{RNN Binary Classifier (based on Roemmele\,et\,al.\ \citep{Roemmele2017AnTest})}
+
+\subsubsection{GRU-RNN and Variants}
+We implement the uni-directional, static 1000 dimensional GRU RNN that takes as inputs the embeddings of the story and its ending. The final state from the GRU is then used as input to a Dense layer with one hidden neuron and a sigmoid activation. The output from the Dense layer is the probability that the given ending is plausible conditioned on the story context.
+
+After reimplementing the original model, we also investigated the impact of replacing the original GRU cell with more powerful LSTM cells and also the Vanilla RNN cell.
+
+\subsubsection{BiDirectional GRU-RNN and LSTM-RNN}
+A natural extension of the current setting would be to incorporate bidirectionality through forward and backward RNN cells. This allows the model to learn associations not only between the story and ending, but also between the ending and the story, thus in theory allowing for better predictions. We use the concatenation of the forward and backward hidden states, and feed it as input to the Dense layer as described in Section 3.1.1.
+
+\subsubsection{Incorporating Attention}
+We further extend our recurrent models and implement attention mechanisms to allow for a better representation of the story. We treat the RNN hidden states of the story as the encoder hidden states, and the ending hidden state as the decoder state. In Seq2Seq terms, this would correspond to a 4-step encoder and single-step decoder. We use both the additive (Bahdanau \citep{Bahdanau2016End-to-EndRecognition}) and multiplicative (Luong \citep{Luong2015EffectiveTranslation}) attention mechanisms. and feed the concatenation of final hidden state and attention state, as the input to the final-dense layer.
+
+\subsection{Feed Forward Classifier (based on Srinivasan\,et\,al.\ \citep{Srinivasan2018ATest})}
+The authors use story context in three ways - Last Sentence, Full Context and No-Context. We use only the last sentence and full context methods and ignore the no context mode, as the results were not better. After associating the story context and the ending, the resulting encoding is used as input to a multi layered feed-forward network with two neurons and a softmax activation as the output. The two outputs indicate the probabilities of whether the ending is plausible or not, and add to one.
+
+In the Last Sentence based context, the embedding of the last sentence in the story is added to the embedding of the ending, which becomes the input for the feedforward network. In the full context mode, the story sentences serve as inputs for a static uni-directional GRU RNN, with the dimension equal to the embedding size. The final hidden state from the GRU is then added to the ending embedding and used as input for the feedforward network. We also experimented with using more powerful LSTM cells instead of the GRU, and did not experiment with attention for these models.
+
+\section{Training}
+All models were trained to minimize the cross entropy loss with labels 0 and 1. The label 1 indicates that the ending is plausible, while 0 means it is not. Models based on Roemmele\,et\,al.\  use a sigmoid activation, single output neuron, while those based on Srinivasan\,et\, al.\ use a softmax activation over 2 output neurons. Accordingly, the labels were converted into one-hot encodings before computing the loss. Negative endings were used in the same ratio of 6:1 as Roemmele\,et\,al.\ We used a mini-batch size of 100 for Roemmele\,et\,al.\ based models, and clip gradients to a maximum $L_2$ norm of 10, and a mini-batch size of 64 for Srinivasan\,et\,al.\ based models, with a maximum $L_2$ norm for gradients of 5. For optimization, we use the RMSProp \citep{HintonNeuralDescent} optimizer with a learning rate of 0.001, which performed better than our other choices of Adam \citep{Kingma2015} and AdaDelta \citep{Zeiler2012ADADELTA:Method}. All models were trained using both Universal Sentence Encoder and SkipThoughts embeddings, and were run on GeForce GTX 1080 Ti on the ETH Leonhard cluster. Training a single epoch takes about 3-4 minutes for the Roemmele models, and about 15 minutes for the Srinivasan models. We trained all models for 20 epochs and evaluated every 1000 steps. The checkpoints corresponding to the best validation set accuracy were saved for each model. 
+
+\section{Experiments}
+Our implementation of the GRU-RNN performs significantly better than the original implementation, from reported accuracies. The original implementation uses the SkipThoughts embeddings from \url{https://github.com/ryankiros/skip-thoughts}, but we use the ones from Google-Research, which are computed using the same ideas. We believe these are of superior quality thus resulting in higher accuracies. Additionally, Universal Sentence Encoder based embeddings significantly underperform compared to their SkipThoughts models. We think this is because of the increased representational capacity of the SkipThoughts models, along with the training paradigm in Cer\, et\, al.\ \citep{2018arXiv180311175C} favoring better overall transfer task performance, rather than better single task performances.
+
+On average, there is not a major improvement in performance using bidirectional models over unidirectional models, with the marginal improvements attributed to increased representational capacity. For both unidirectional and bi-directional GRUs, we note that additive attention generalizes much better than the multiplicative attention or the no-attention variant. A possible reason for this is discussed in Vaswani\, et\,al.\ \citep{AllYouNeed}, where they hypothesize that for larger dimensions, multiplicative attention leads to larger dot products that move the softmax into regions of low gradients. In case of additive attention, this dot product explosion is controlled by the tanh function. This also explains why LSTMs with additive attention fail to generalize as well as GRUs as their gradient flows are more restrictive.
+
+The feedforward network using the last sentence as context performs the best, in agreement with the results in Srinivasan\, et,\ al.\ \citep{Srinivasan2018ATest}. One reason for this could be that the last sentence constrains the space of possible endings. Another reason could be the inherent bias in the creation of Story Cloze stories, which is discussed in Sharma\,et\, al.\ \citep{sharma-etal-2018-tackling}.
+
+\begin{table}[btp]\centering
+\begin{tabular}{lccccc}
+\toprule
+\multirow{3}{*}{\textbf{Model}} & 
+\multirow{3}{*}{\textbf{Attention Type}} &
+\multicolumn{2}{c}{\textbf{STB}} & 
+\multicolumn{2}{c}{\textbf{USE}} \\
+& & {Validation} & {Test} & {Validation} & {Test} \\
+& & {Accuracy} & {Accuracy} & {Accuracy} & {Accuracy} \\
+\midrule
+
+RNN GRU & - & 0.692 & 0.662 & 0.654 & 0.632\\
+RNN LSTM & - & 0.69 & 0.685 & 0.66 & 0.654\\
+RNN Vanilla & - & 0.6 & 0.558 & 0.578 & 0.542\\
+
+\midrule
+
+RNN GRU & Multiplicative & 0.694 & 0.674 & 0.664 & 0.645\\
+RNN LSTM & Multiplicative & 0.685 & 0.672 & 0.651 & 0.639 \\
+RNN GRU & Additive & 0.686 & 0.684 & 0.654 & 0.636\\
+RNN LSTM & Additive & 0.683 & 0.67 & 0.654 & 0.643 \\
+\midrule
+
+Bi-RNN GRU & - & \textbf{0.701} & 0.663 & 0.668 & 0.66 \\
+Bi-RNN LSTM & - & 0.687 & 0.678 & 0.658 & 0.649 \\
+Bi-RNN GRU & Multiplicative & 0.696 & 0.668 & 0.648 & 0.63\\
+Bi-RNN LSTM & Multiplicative & 0.674 & 0.646 & 0.655 & 0.647\\
+Bi-RNN GRU & Additive & \textbf{0.697} & 0.691 & 0.668 & 0.66\\
+Bi-RNN LSTM & Additive & 0.691 & 0.663 & 0.651 & 0.641\\
+\midrule
+
+FFN-FC-GRU & - & 0.688 & 0.695 & 0.662 & 0.641\\
+FFN-FC-LSTM & - & 0.680 & 0.677 & 0.66 & 0.648\\
+FFN LS & - & \textbf{0.707} & 0.688 & 0.65 & 0.623\\
+
+\bottomrule
+\vspace{1pt}
+\end{tabular}
+\captionsetup{justification=centering}
+\caption{Accuracy scores using the original training set. \\
+(STB: SkipThoughts-Both, USE: Universal Sentence Encoder)}
+
+\vspace{20pt}
+\begin{tabular}{lccc}
+\toprule
+
+\multirow{2}{*}{\textbf{Model}} & 
+\multirow{2}{*}{\textbf{Attention Type}} &
+\multicolumn{2}{c}{\textbf{Test Accuracy}} \\
+& & {\textbf{STB}} & {\textbf{USE}} \\
+\midrule
+
+RNN GRU & - & 0.775 & 0.753 \\
+RNN LSTM & - & 0.746 & 0.752\\
+
+\midrule
+
+RNN GRU & Multiplicative & 0.764 & 0.747 \\
+RNN LSTM & Multiplicative & 0.739 & 0.75 \\
+RNN GRU & Additive & \textbf{0.78} & 0.752 \\
+RNN LSTM & Additive & 0.749 & 0.759 \\
+\midrule
+
+Bi-RNN GRU & - &  0.74 & 0.749 \\
+Bi-RNN LSTM & - &  0.738 & 0.761 \\
+Bi-RNN GRU & Multiplicative & 0.764 & 0.747 \\
+Bi-RNN LSTM & Multiplicative & 0.743 & 0.752 \\
+Bi-RNN GRU & Additive & 0.74 & 0.726\\
+Bi-RNN LSTM & Additive &  0.741 & 0.708 \\
+\midrule
+
+FFN-FC-GRU & - & \textbf{0.778} & 0.755\\
+FFN-FC-LSTM & - & 0.742 & 0.765\\
+FFN LS & - & \textbf{0.797} & 0.735 \\
+
+\bottomrule
+\vspace{1pt}
+\end{tabular}
+\captionsetup{justification=centering}
+\caption{Accuracy scores by training on the validation set. \\
+(STB: SkipThoughts-Both, USE: Universal Sentence Encoder)}
+\end{table}
+
+\section{Conclusion and Future Work}
+We re-implemented the model from Roemmele\,et\,al.\ \citep{Roemmele2017AnTest} and achieve higher accuracies than those reported. Additionally, we look at different association strategy, based on Srinivasan\,et\,al.\ \citep{Srinivasan2018ATest} and reimplement their models. Various extensions to these models are also considered. The training and evaluation for all models are carried out using two different embeddings - SkipThoughts and Universal Sentence Encoder. Overall, we find that the Last Sentence based Feed Forward model (Section 3.2) performs the best, followed by the BiGRU-RNN with no attention and the BiGRU-RNN with additive attention, with all three models using SkipThoughts embeddings. 
+
+Future work would include a further comparison with a current state-of-the-art pretrained models like GPT-2 \citep{radford2019language}, BERT \citep{Bert} and ELMo \citep{Elmo}. One major reason for the high human performance is the inherent "world-view" notion and commonsense knowledge, which is refined with time and experiences. Another potential direction to consider would be the incorporation of commonsense knowledge base and sentiment analysis units \citep{CommonSense} into the neural architecture. 
+
+\bibliography{References}
+
+\end{document}
