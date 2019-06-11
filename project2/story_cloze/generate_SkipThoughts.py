@@ -23,7 +23,7 @@ def main():
 
     args = parser.parse_args()
 
-    file = os.path.join(args.input_dir, args.file)
+    file_to_read = os.path.join(args.input_dir, args.file)
 
     filename = args.mode + "_embeddings_SkipThoughts_" + args.embed_mode + ".npy"
     embedding_dir = os.path.join(args.input_dir, "embeddings", "skip_thoughts")
@@ -33,10 +33,13 @@ def main():
         embedding_dim = 4800
     encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode)
 
-    df = pd.read_csv(file)
-    if args.mode == "eval":
-        correct_ending_idxs = df["AnswerRightEnding"] - 1
-        df.drop(["InputStoryid", "AnswerRightEnding"], axis=1, inplace=True)
+    df = pd.read_csv(file_to_read)
+    if "InputStoryid" in df.columns:
+        df.drop(["InputStoryid"], axis=1, inplace=True)
+
+    if "AnswerRightEnding" in df.columns:
+        df.drop(["AnswerRightEnding"], axis=1, inplace=True)
+
     cols = ["sentence_{}".format(i) for i in range(1, 5)] + ["ending1", "ending2"]
     df.columns = cols
 
