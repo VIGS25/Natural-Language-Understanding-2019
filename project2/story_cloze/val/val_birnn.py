@@ -26,7 +26,7 @@ def main():
     parser.add_argument("--max_checkpoints_to_keep", default=5, type=int, help="How many checkpoints to keep.")
 
     # Setup specific
-    parser.add_argument("--batch_size", default=64, type=int, help="Batch Size used.")
+    parser.add_argument("--batch_size", default=100, type=int, help="Batch Size used.")
     parser.add_argument("--rnn_type", default="gru", help="Type of RNN used.")
     parser.add_argument("--num_hidden_units", default=1000, type=int, help="Number of hidden units in RNN Cell")
     parser.add_argument("--encoder_type", default="skipthoughts", choices=["skipthoughts", "universal"], help="Encoder type")
@@ -42,7 +42,7 @@ def main():
 
     # Training specific
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate used.")
-    parser.add_argument("--num_epochs", type=int, default=50, help="Number of epochs for training.")
+    parser.add_argument("--num_epochs", type=int, default=10, help="Number of epochs for training.")
     parser.add_argument("--log_every", type=int, default=100, help="Log stats every.")
     parser.add_argument("--print_every", type=int, default=100, help="Print stats every.")
     parser.add_argument("--eval_every", type=int, default=100, help="Eval every.")
@@ -66,7 +66,7 @@ def main():
             embedding_dim = 2400
         else:
             embedding_dim = 4800
-        encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode)
+        encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode, load=False)
     elif args.encoder_type == "universal":
         encoder = UniversalEncoder(load=False)
         embedding_dim = 512

@@ -40,7 +40,7 @@ def main():
 
     # Training specific
     parser.add_argument("--learning_rate", default=0.001, type=float, help="Learning rate used.")
-    parser.add_argument("--num_epochs", type=int, default=50, help="Number of epochs for training.")
+    parser.add_argument("--num_epochs", type=int, default=30, help="Number of epochs for training.")
     parser.add_argument("--log_every", type=int, default=100, help="Log stats every.")
     parser.add_argument("--print_every", type=int, default=100, help="Print stats every.")
     parser.add_argument("--eval_every", type=int, default=100, help="Eval every")
@@ -62,7 +62,7 @@ def main():
             embedding_dim = 2400
         else:
             embedding_dim = 4800
-        encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode)
+        encoder = SkipThoughts(embed_dir=embedding_dir, mode=args.embed_mode, load=False)
     elif args.encoder_type == "universal":
         encoder = UniversalEncoder(load=False)
         embedding_dim = 512
