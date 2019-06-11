@@ -18,7 +18,7 @@
   * `attention.py` - Implementation of the attention modules
   * `generate_SkipThoughts.py` - Generate and save SkipThoughts embeddings for any dataset (preferably the validation or any test set). The SkipThoughts embeddings for the original training set are generated
       the first time when running any of the train scripts. For the other times, it is loaded. (This takes ~ 7hrs though)
-  * `generate_USE.py` - Generate the save Universal Sentence Encoder (USE) embeddings for train, validation and original Story Cloze test dataset. 
+  * `generate_USE.py` - Generate and save Universal Sentence Encoder (USE) embeddings for train, validation and original Story Cloze test dataset. 
      Since we don't use USE for predictions, there is no script to generate USE embeddings for a custom file.
 * `experiments/` - Contains bash scripts for each of the experiments in the report.
 * `Makefile` - Contains definitions for various tasks.
