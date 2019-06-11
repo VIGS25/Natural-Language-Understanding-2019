@@ -6,19 +6,19 @@
 * `report/` - The LaTeX report and the generated PDF.
 * `story_cloze/` - Source Folder
   * `embeddings/` -
-    * `skip_thoughts/` - External module from [TensorFlow-Models](https://github.com/tensorflow/models/tree/master/research/skip_thoughts
+    * `skip_thoughts/` - External module from [TensorFlow-Models](https://github.com/tensorflow/models/tree/master/research/skip_thoughts)
     * `sentence_encoders.py` - Implementations of different sentence encoders used in the experiments.
   * `models/` - Contains implementations of different models used in the experiments
     * `base_model.py` - BaseModel class, which other models inherit from. Contains functionality for initial setup, fit and evaluate
-    * `ffn.py` - FeedForward Network with different contextual encodings, as implemented in XXX
-    * `roemmele_rnn.py` - RNN
-    * `roemmele_birnn.py` -
+    * `ffn.py` - FeedForward Network with different contextual encodings, as implemented in [Srinivasan et al.](https://arxiv.org/abs/1803.05547)
+    * `roemmele_rnn.py` - RNN model based on [Roemmele et al.](https://www.aclweb.org/anthology/W17-0911)
+    * `roemmele_birnn.py` - BiRNN model extending the original implementation in [Roemmele et al.](https://www.aclweb.org/anthology/W17-0911)
   * `train/` - Contains the train scripts for each of the models
   * `datasets.py` - Functionality for loading and encoding and batching datasets
   * `attention.py` - Implementation of the attention modules
-  * `generate_SkipThoughts.py` - Generate and save SkipThoughts embeddings for any dataset. The SkipThoughts embeddings for the original training set are generated
+  * `generate_SkipThoughts.py` - Generate and save SkipThoughts embeddings for any dataset (preferably the validation or any test set). The SkipThoughts embeddings for the original training set are generated
       the first time when running any of the train scripts. For the other times, it is loaded. (This takes ~ 7hrs though)
-  * `generate_USE.py` - Generate the save Universal Sentence Encoder (USE) embeddings for train, eval and original Story Cloze test dataset. 
+  * `generate_USE.py` - Generate the save Universal Sentence Encoder (USE) embeddings for train, validation and original Story Cloze test dataset. 
      Since we don't use USE for predictions, there is no script to generate USE embeddings for a custom file.
 * `experiments/` - Contains bash scripts for each of the experiments in the report.
 * `Makefile` - Contains definitions for various tasks.
@@ -38,7 +38,7 @@ model checkpoints and logs (~15GB).
 
 ## SkipThoughts Based Experiments
 
-### Roemmele et al.
+### [Roemmele et al.](https://www.aclweb.org/anthology/W17-091)
 
 All experiments based on Roemmele et al are prefixed with `roemmele_`.
 * To run experiments without attention use the command:
@@ -68,7 +68,7 @@ e.g. To run the Roemmele GRU with multiplicative attention, the command would be
 ```
 make roemmele_gru_mult_attn
 ```
-### Srinivasan et al.
+### [Srinivasan et al.](https://arxiv.org/abs/1803.05547)
 
 All experiments based on Srinivasan et al. are prefixed with `srini_ffn_`
 
