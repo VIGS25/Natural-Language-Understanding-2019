@@ -28,8 +28,7 @@
 ## Set up
 
 * Install Python 3.6+.
-* Ensure `SCRATCH` environment variable is set to a folder with sufficient memory for pre-trained embeddings (~15GB), storing training/evaluation/testing data,
-model checkpoints and logs (~15GB).
+* Ensure `SCRATCH` variable is set to a folder with sufficient memory for pre-trained models, train, validation and test embeddings (~100GB), model checkpoints and logs (~15GB).
 * Run the setup:
     ```
     make requirements
