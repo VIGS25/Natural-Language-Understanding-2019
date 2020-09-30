@@ -4,7 +4,7 @@ scikit-learn
 nltk
 numpy
 pandas
-tensorflow-gpu==1.15.2
+tensorflow-gpu==1.15.4
 tensorflow-hub
 tensorboard==1.7.0
 yapf
